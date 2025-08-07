@@ -169,12 +169,6 @@ ML_STATISTICAL_FEATURES_PROMPT = """
   4. 交互特征仅选择相关性高的组合
   """
 
-⏺ Update Todos
-  ⎿  ☒ 重新设计ML特征提取Prompt - 更精准和实用    
-     ☐ 重新设计DL特征提取Prompt - 优化序列表示
-     ☐ 重新设计RL特征提取Prompt - 强化状态动作映射
-     ☐ 设计统一的特征验证框架
-     ☐ 创建端到端的使用示例
 
 ⏺ 二、DL特征提取Prompt - 重新设计版
 
@@ -518,3 +512,1220 @@ ML_STATISTICAL_FEATURES_PROMPT = """
   3. 可用于GCN, GAT, GraphSAGE等模型
   4. 保持图的稀疏性以提高效率
   """
+三、RL特征提取Prompt - 重新设计版
+
+  1. MDP状态-动作空间定义
+
+  RL_MDP_DEFINITION_PROMPT = """
+  你是一个强化学习专家，将行为日志转换为马尔可夫决策过程(MDP)。
+
+  任务：定义清晰的状态空间、动作空间和奖励函数。
+
+  输入行为序列：
+  {behavior_sequence}
+
+  安全策略约束：
+  {security_constraints}
+
+  生成以下MDP定义：
+
+  {
+      "state_space": {
+          "state_representation": {
+              "dimension": 128,
+              "encoding_type": "continuous",  # continuous/discrete/mixed
+              "state_variables": [
+                  {
+                      "name": "current_location",
+                      "type": "categorical",
+                      "possible_values": ["login_page", "dashboard", "database", "file_system"],
+                      "encoding": "one_hot"
+                  },
+                  {
+                      "name": "permission_level",
+                      "type": "ordinal",
+                      "possible_values": [0, 1, 2, 3],  # none, read, write, admin
+                      "encoding": "numeric"
+                  },
+                  {
+                      "name": "time_in_session",
+                      "type": "continuous",
+                      "range": [0, 86400],
+                      "encoding": "normalized"
+                  },
+                  {
+                      "name": "resources_accessed",
+                      "type": "set",
+                      "max_size": 100,
+                      "encoding": "multi_hot"
+                  },
+                  {
+                      "name": "recent_actions",
+                      "type": "sequence",
+                      "length": 10,
+                      "encoding": "embedding"
+                  }
+              ]
+          },
+          "state_transitions": [
+              {
+                  "from_state": "S_LOGIN",
+                  "to_state": "S_DASHBOARD",
+                  "probability": 0.95,
+                  "conditions": ["auth_success"]
+              },
+              {
+                  "from_state": "S_DASHBOARD",
+                  "to_state": "S_DATABASE",
+                  "probability": 0.4,
+                  "conditions": ["has_db_permission"]
+              }
+          ],
+          "terminal_states": ["S_LOGOUT", "S_BLOCKED", "S_TIMEOUT"],
+          "initial_state_distribution": {
+              "S_LOGIN": 1.0,
+              "others": 0.0
+          }
+      },
+      
+      "action_space": {
+          "action_type": "discrete",  # discrete/continuous/hybrid
+          "num_actions": 25,
+          "action_definitions": [
+              {
+                  "action_id": 0,
+                  "name": "login",
+                  "parameters": [],
+                  "preconditions": ["not_authenticated"],
+                  "effects": ["authenticated", "session_started"]
+              },
+              {
+                  "action_id": 1,
+                  "name": "query_database",
+                  "parameters": ["query_type", "table_name"],
+                  "preconditions": ["authenticated", "db_permission"],
+                  "effects": ["data_retrieved", "log_generated"]
+              },
+              {
+                  "action_id": 2,
+                  "name": "download_file",
+                  "parameters": ["file_id", "size"],
+                  "preconditions": ["authenticated", "file_access"],
+                  "effects": ["file_downloaded", "bandwidth_used"]
+              }
+          ],
+          "action_masking": {
+              "state_dependent_masks": [
+                  {"state": "S_LOGIN", "valid_actions": [0]},
+                  {"state": "S_DATABASE", "valid_actions": [1, 2, 3, 4]}
+              ]
+          },
+          "action_embeddings": [[动作嵌入向量矩阵]]  # shape: [num_actions, embedding_dim]
+      },
+      
+      "reward_function": {
+          "immediate_rewards": {
+              "normal_operation": {
+                  "login_success": 0,
+                  "query_success": 0,
+                  "logout_clean": 1
+              },
+              "security_violations": {
+                  "unauthorized_access": -100,
+                  "data_exfiltration": -200,
+                  "privilege_escalation": -150,
+                  "policy_violation": -50
+              },
+              "efficiency_rewards": {
+                  "quick_task_completion": 5,
+                  "resource_optimization": 3,
+                  "clean_session": 2
+              }
+          },
+          "sparse_rewards": {
+              "goal_achievement": 100,
+              "mission_failure": -100
+          },
+          "shaped_rewards": {
+              "progress_towards_goal": "distance_based",
+              "potential_function": "negative_distance_to_goal",
+              "shaping_coefficient": 0.1
+          },
+          "multi_objective_rewards": [
+              {"objective": "security", "weight": 0.6},
+              {"objective": "efficiency", "weight": 0.3},
+              {"objective": "compliance", "weight": 0.1}
+          ]
+      },
+      
+      "transition_dynamics": {
+          "deterministic_transitions": [
+              {"action": "logout", "result": "session_end", "probability": 1.0}
+          ],
+          "stochastic_transitions": [
+              {
+                  "action": "query_database",
+                  "outcomes": [
+                      {"result": "success", "probability": 0.8},
+                      {"result": "timeout", "probability": 0.15},
+                      {"result": "error", "probability": 0.05}
+                  ]
+              }
+          ],
+          "transition_matrix": [[P(s'|s,a)矩阵]],  # shape: [|S| x |A| x |S|]
+          "uncertainty_estimates": [[转移不确定性]]
+      },
+      
+      "observation_space": {
+          "fully_observable": false,
+          "observation_function": {
+              "type": "partial",
+              "visible_features": ["own_actions", "public_resources"],
+              "hidden_features": ["other_users", "system_state"],
+              "noise_level": 0.1
+          },
+          "belief_state_representation": {
+              "method": "particle_filter",
+              "num_particles": 100,
+              "update_rule": "bayesian"
+          }
+      },
+      
+      "constraints": {
+          "safety_constraints": [
+              "never_access_without_permission",
+              "max_download_limit_per_session",
+              "no_concurrent_sessions"
+          ],
+          "resource_constraints": [
+              "max_queries_per_minute: 100",
+              "max_bandwidth_mbps: 100",
+              "max_session_duration: 3600"
+          ],
+          "behavioral_constraints": [
+              "follow_workflow_sequence",
+              "maintain_audit_trail"
+          ]
+      }
+  }
+
+  要求：
+  1. 状态必须马尔可夫性（包含所有决策相关信息）
+  2. 动作空间要完整且互斥
+  3. 奖励函数要反映真实目标
+  4. 考虑部分可观察性
+  """
+
+  ### 2. 策略学习特征
+
+  ```python
+  RL_POLICY_LEARNING_PROMPT = """
+  提取用于策略学习的特征，支持Q-Learning、Policy Gradient、Actor-Critic等算法。
+
+  历史轨迹数据：
+  {trajectory_data}
+
+  专家演示（如果有）：
+  {expert_demonstrations}
+
+  生成策略学习特征：
+
+  {
+      "value_function_features": {
+          "state_values": {
+              "V(s)_estimates": [状态价值估计],
+              "confidence_intervals": [置信区间],
+              "td_errors": [时序差分误差],
+              "gae_advantages": [广义优势估计]
+          },
+          "action_values": {
+              "Q(s,a)_table": [[Q值表]],
+              "q_network_outputs": [[神经网络Q值]],
+              "double_q_estimates": [[双Q网络估计]],
+              "distributional_q": {
+                  "atoms": 51,
+                  "support": [-10, 10],
+                  "probabilities": [[概率分布]]
+              }
+          },
+          "advantage_estimates": {
+              "A(s,a)": [[优势函数值]],
+              "normalized_advantages": [[标准化优势]],
+              "clipped_advantages": [[裁剪后优势]]
+          }
+      },
+      
+      "policy_representation": {
+          "discrete_policy": {
+              "action_probabilities": [[动作概率分布]],
+              "logits": [[未归一化分数]],
+              "entropy": [策略熵],
+              "temperature": 1.0
+          },
+          "continuous_policy": {
+              "mean_actions": [[均值]],
+              "log_std": [[对数标准差]],
+              "covariance_matrix": [[协方差矩阵]],
+              "action_bounds": {"low": -1, "high": 1}
+          },
+          "mixed_policy": {
+              "discrete_head": [[离散动作概率]],
+              "continuous_head": [[连续动作参数]]
+          }
+      },
+      
+      "experience_replay": {
+          "transitions": [
+              {
+                  "state": [状态向量],
+                  "action": 1,
+                  "reward": -5,
+                  "next_state": [下一状态向量],
+                  "done": false,
+                  "info": {"step": 1, "episode": 1}
+              }
+          ],
+          "prioritized_replay": {
+              "priorities": [优先级值],
+              "importance_weights": [重要性权重],
+              "beta": 0.4
+          },
+          "hindsight_goals": [
+              {"achieved_goal": [达成目标], "desired_goal": [期望目标]}
+          ],
+          "n_step_returns": {
+              "n": 5,
+              "returns": [n步回报],
+              "discount_factor": 0.99
+          }
+      },
+      
+      "exploration_features": {
+          "epsilon": 0.1,
+          "exploration_bonus": {
+              "count_based": [访问计数奖励],
+              "uncertainty_based": [不确定性奖励],
+              "curiosity_reward": [好奇心奖励]
+          },
+          "noise_parameters": {
+              "ou_noise": {"theta": 0.15, "sigma": 0.2},
+              "parameter_noise": {"std": 0.1}
+          },
+          "thompson_sampling": {
+              "posterior_samples": [[后验采样]]
+          }
+      },
+      
+      "meta_features": {
+          "episode_statistics": {
+              "episode_length": 245,
+              "total_reward": 85.3,
+              "success_rate": 0.75,
+              "avg_q_value": 12.4
+          },
+          "learning_progress": {
+              "policy_change": 0.05,
+              "value_function_error": 0.8,
+              "gradient_norm": 2.3,
+              "kl_divergence": 0.01
+          },
+          "curriculum_stage": {
+              "current_difficulty": 3,
+              "max_difficulty": 10,
+              "progression_rate": 0.3
+          }
+      },
+      
+      "multi_agent_features": {
+          "agent_observations": [
+              {"agent_id": 0, "local_obs": [局部观察]},
+              {"agent_id": 1, "local_obs": [局部观察]}
+          ],
+          "joint_action": [0, 1, 2],
+          "communication_messages": [[通信消息]],
+          "centralized_value": 45.2,
+          "credit_assignment": [0.4, 0.6]
+      },
+      
+      "inverse_rl_features": {
+          "demonstrated_trajectories": [[专家轨迹]],
+          "inferred_reward_weights": [推断的奖励权重],
+          "feature_expectations": {
+              "expert": [专家特征期望],
+              "policy": [策略特征期望],
+              "gradient": [特征期望梯度]
+          },
+          "discriminator_outputs": [判别器输出],
+          "policy_occupancy": [[策略占用度量]]
+      }
+  }
+
+  要求：
+  1. 支持在线和离线学习
+  2. 包含探索与利用平衡
+  3. 处理稀疏奖励问题
+  4. 支持多任务和迁移学习
+  """
+
+  ### 3. 安全强化学习特征
+
+  ```python
+  RL_SAFE_LEARNING_PROMPT = """
+  提取安全强化学习特征，确保策略满足安全约束。
+
+  行为数据：
+  {behavior_data}
+  安全规范：
+  {safety_specifications}
+
+  生成安全RL特征：
+
+  {
+      "safety_constraints": {
+          "hard_constraints": [
+              {
+                  "name": "no_data_leak",
+                  "constraint_function": "g(s,a) <= 0",
+                  "violation_penalty": -1000,
+                  "satisfaction_rate": 0.99
+              }
+          ],
+          "soft_constraints": [
+              {
+                  "name": "minimize_risk",
+                  "cost_function": "c(s,a)",
+                  "budget": 10,
+                  "current_cost": 3.5
+              }
+          ],
+          "chance_constraints": [
+              {
+                  "name": "failure_probability",
+                  "threshold": 0.01,
+                  "confidence_level": 0.95
+              }
+          ]
+      },
+      
+      "safe_exploration": {
+          "safe_set": {
+              "known_safe_states": [[安全状态集]],
+              "safe_actions": [[安全动作集]],
+              "expansion_rate": 0.1
+          },
+          "shield_synthesis": {
+              "pre_shield": "阻止不安全动作",
+              "post_shield": "纠正不安全结果",
+              "shield_rules": [[屏蔽规则]]
+          },
+          "lyapunov_functions": {
+              "candidate_function": "V(s) = s^T P s",
+              "stability_certificate": true,
+              "region_of_attraction": [[吸引域]]
+          }
+      },
+      
+      "risk_measures": {
+          "cvar": {
+              "alpha": 0.05,
+              "value": -50,
+              "tail_distribution": [[尾部分布]]
+          },
+          "variance": {
+              "return_variance": 25.3,
+              "value_variance": 12.1
+          },
+          "worst_case": {
+              "worst_return": -100,
+              "worst_state": [最差状态],
+              "robust_value": -20
+          }
+      },
+      
+      "constrained_optimization": {
+          "lagrangian": {
+              "objective": "J(θ) - λ * C(θ)",
+              "multipliers": [拉格朗日乘子],
+              "dual_gap": 0.01
+          },
+          "primal_dual": {
+              "primal_variables": [原始变量],
+              "dual_variables": [对偶变量],
+              "convergence_rate": 0.95
+          },
+          "barrier_functions": {
+              "log_barrier": "正则项",
+              "barrier_parameter": 0.001
+          }
+      },
+      
+      "verification_features": {
+          "reachability": {
+              "reachable_set": [[可达集]],
+              "avoid_set": [[避免集]],
+              "time_horizon": 100
+          },
+          "invariants": [
+              "permission_level <= max_allowed",
+              "data_access_count <= threshold"
+          ],
+          "formal_guarantees": {
+              "probabilistic_guarantee": 0.99,
+              "deterministic_guarantee": false
+          }
+      },
+      
+      "human_in_loop": {
+          "intervention_points": [
+              {"state": [状态], "action": 5, "human_override": 3}
+          ],
+          "preference_learning": {
+              "pairwise_preferences": [[偏好对]],
+              "reward_model_confidence": 0.85
+          },
+          "explainability": {
+              "action_explanation": "选择此动作因为...",
+              "counterfactuals": "如果...则...",
+              "feature_importance": [特征重要性]
+          }
+      }
+  }
+
+  要求：
+  1. 确保策略安全性
+  2. 提供可验证的保证
+  3. 支持人类干预
+  4. 包含风险度量
+  """
+
+⏺ Update Todos
+  ⎿  ☒ 重新设计ML特征提取Prompt - 更精准和实用    
+     ☒ 重新设计DL特征提取Prompt - 优化序列表示
+     ☒ 重新设计RL特征提取Prompt - 强化状态动作映射
+     ☐ 设计统一的特征验证框架
+     ☐ 创建端到端的使用示例
+
+⏺ 四、统一特征验证框架
+
+  特征质量验证Prompt
+
+  FEATURE_VALIDATION_PROMPT = """
+  验证提取特征的质量和有效性。
+
+  提取的特征：
+  {extracted_features}
+
+  特征类型：{feature_type}  # ML/DL/RL
+
+  验证并输出以下报告：
+
+  {
+      "data_quality_check": {
+          "completeness": {
+              "missing_rate": 0.02,
+              "missing_features": ["feature_5", "feature_12"],
+              "imputation_needed": true
+          },
+          "consistency": {
+              "value_range_violations": [
+                  {"feature": "probability_score", "invalid_values": [1.5, -0.1]}
+              ],
+              "type_mismatches": [
+                  {"feature": "user_id", "expected": "string", "found": "int"}
+              ],
+              "logical_inconsistencies": [
+                  "success_rate + failure_rate != 1.0"
+              ]
+          },
+          "uniqueness": {
+              "duplicate_samples": 5,
+              "near_duplicates": 12,
+              "uniqueness_ratio": 0.98
+          }
+      },
+      
+      "statistical_validation": {
+          "distribution_analysis": {
+              "skewness": {"feature_1": 0.5, "feature_2": 2.3},
+              "kurtosis": {"feature_1": 3.1, "feature_2": 8.5},
+              "normality_test": {
+                  "shapiro_wilk_p_value": 0.03,
+                  "is_normal": false
+              }
+          },
+          "outlier_detection": {
+              "method": "isolation_forest",
+              "outlier_indices": [23, 45, 67],
+              "outlier_percentage": 0.03
+          },
+          "correlation_analysis": {
+              "high_correlations": [
+                  {"features": ["f1", "f2"], "correlation": 0.95}
+              ],
+              "multicollinearity_vif": {"f1": 5.2, "f2": 4.8}
+          }
+      },
+      
+      "ml_specific_validation": {
+          "feature_importance": {
+              "method": "random_forest",
+              "importance_scores": {"f1": 0.3, "f2": 0.25, "f3": 0.15},
+              "cumulative_importance_90": 8  # 前8个特征贡献90%重要性
+          },
+          "predictive_power": {
+              "mutual_information": {"f1": 0.8, "f2": 0.6},
+              "chi_square_test": {"f1": {"statistic": 45.2, "p_value": 0.001}},
+              "anova_f_score": {"f1": 23.5, "f2": 18.3}
+          },
+          "class_balance": {
+              "target_distribution": {"class_0": 0.7, "class_1": 0.3},
+              "imbalance_ratio": 2.33,
+              "smote_recommended": true
+          }
+      },
+      
+      "dl_specific_validation": {
+          "sequence_properties": {
+              "avg_sequence_length": 256,
+              "max_sequence_length": 512,
+              "padding_ratio": 0.3,
+              "attention_mask_coverage": 0.7
+          },
+          "embedding_quality": {
+              "embedding_variance": 0.05,
+              "dead_neurons": 3,
+              "activation_sparsity": 0.2
+          },
+          "batch_statistics": {
+              "batch_size_recommendation": 32,
+              "gradient_accumulation_steps": 4,
+              "effective_batch_size": 128
+          }
+      },
+      
+      "rl_specific_validation": {
+          "mdp_validity": {
+              "markov_property_test": "passed",
+              "state_coverage": 0.85,
+              "action_coverage": 0.92,
+              "transition_determinism": 0.3
+          },
+          "reward_analysis": {
+              "reward_sparsity": 0.9,
+              "reward_scale": [-100, 100],
+              "reward_shaping_needed": true
+          },
+          "exploration_metrics": {
+              "state_visitation_entropy": 4.5,
+              "action_diversity": 0.7,
+              "exploration_efficiency": 0.6
+          }
+      },
+      
+      "cross_validation_results": {
+          "cv_folds": 5,
+          "metrics": {
+              "accuracy": {"mean": 0.92, "std": 0.03},
+              "precision": {"mean": 0.89, "std": 0.04},
+              "recall": {"mean": 0.94, "std": 0.02},
+              "f1_score": {"mean": 0.91, "std": 0.03}
+          },
+          "feature_stability": {
+              "stable_features": ["f1", "f2", "f3"],
+              "unstable_features": ["f8", "f9"]
+          }
+      },
+      
+      "recommendations": {
+          "feature_engineering": [
+              "对f1和f2进行多项式特征生成",
+              "删除高相关特征f5",
+              "对长尾分布特征f7进行对数变换"
+          ],
+          "preprocessing": [
+              "使用RobustScaler处理异常值",
+              "应用PCA降维到50维",
+              "类别特征使用Target Encoding"
+          ],
+          "model_selection": {
+              "recommended_models": ["XGBoost", "LightGBM"],
+              "avoid_models": ["Linear Regression"],
+              "ensemble_suggestion": "Stacking with 3 base models"
+          }
+      }
+  }
+
+  验证标准：
+  1. 数据完整性和一致性
+  2. 统计显著性
+  3. 模型适配性
+  4. 计算效率
+  """
+五、端到端使用示例
+
+  完整的特征提取Pipeline
+
+  import asyncio
+  import json
+  from typing import Dict, List, Any
+  import pandas as pd
+  import numpy as np
+
+  class UnifiedFeatureExtractor:
+      """
+      统一的LLM特征提取器，支持ML/DL/RL全流程
+      """
+
+      def __init__(self, llm_client, config=None):
+          self.llm = llm_client
+          self.config = config or self.default_config()
+
+          # 加载所有Prompt模板
+          self.prompts = {
+              'ml_statistical': ML_STATISTICAL_FEATURES_PROMPT,
+              'ml_engineered': ML_ENGINEERED_FEATURES_PROMPT,
+              'dl_sequence': DL_SEQUENCE_REPRESENTATION_PROMPT,
+              'dl_image': DL_IMAGE_REPRESENTATION_PROMPT,
+              'dl_graph': DL_GRAPH_REPRESENTATION_PROMPT,
+              'rl_mdp': RL_MDP_DEFINITION_PROMPT,
+              'rl_policy': RL_POLICY_LEARNING_PROMPT,
+              'rl_safe': RL_SAFE_LEARNING_PROMPT,
+              'validation': FEATURE_VALIDATION_PROMPT
+          }
+
+          self.cache = {}
+          self.validation_results = {}
+
+      def default_config(self):
+          return {
+              'ml': {
+                  'feature_types': ['basic', 'engineered'],
+                  'scaling': 'robust',
+                  'encoding': 'target'
+              },
+              'dl': {
+                  'max_seq_length': 512,
+                  'vocab_size': 10000,
+                  'embedding_dim': 128,
+                  'image_size': 224
+              },
+              'rl': {
+                  'state_dim': 128,
+                  'action_dim': 25,
+                  'discount_factor': 0.99,
+                  'safety_threshold': 0.95
+              }
+          }
+
+      async def extract_all_features(self, 
+                                     behavior_logs: str,
+                                     target_models: List[str] = ['ml', 'dl', 'rl'],
+                                     validate: bool = True) -> Dict[str, Any]:
+          """
+          完整的特征提取流程
+          
+          Args:
+              behavior_logs: 原始行为日志
+              target_models: 目标模型类型列表
+              validate: 是否验证特征质量
+              
+          Returns:
+              包含所有特征的字典
+          """
+
+          results = {
+              'metadata': {
+                  'timestamp': pd.Timestamp.now().isoformat(),
+                  'log_size': len(behavior_logs),
+                  'target_models': target_models
+              },
+              'features': {}
+          }
+
+          # 并行提取不同类型的特征
+          tasks = []
+
+          if 'ml' in target_models:
+              tasks.append(self.extract_ml_features(behavior_logs))
+          if 'dl' in target_models:
+              tasks.append(self.extract_dl_features(behavior_logs))
+          if 'rl' in target_models:
+              tasks.append(self.extract_rl_features(behavior_logs))
+
+          # 等待所有任务完成
+          extracted_features = await asyncio.gather(*tasks)
+
+          # 组织结果
+          for i, model_type in enumerate(target_models):
+              results['features'][model_type] = extracted_features[i]
+
+          # 验证特征质量
+          if validate:
+              validation_tasks = []
+              for model_type, features in results['features'].items():
+                  validation_tasks.append(
+                      self.validate_features(features, model_type)
+                  )
+
+              validation_results = await asyncio.gather(*validation_tasks)
+              results['validation'] = dict(zip(target_models, validation_results))
+
+          # 生成特征报告
+          results['report'] = self.generate_feature_report(results)
+
+          return results
+
+      async def extract_ml_features(self, logs: str) -> Dict:
+          """提取ML特征"""
+
+          # 阶段1: 基础统计特征
+          basic_prompt = self.prompts['ml_statistical'].format(
+              log_data=logs
+          )
+          basic_features = await self.llm_complete(basic_prompt)
+
+          # 阶段2: 工程特征
+          # 首先获取基线数据
+          baseline = await self.get_user_baseline(logs)
+          peer_stats = await self.get_peer_group_stats(logs)
+
+          engineered_prompt = self.prompts['ml_engineered'].format(
+              basic_features=basic_features,
+              user_baseline=baseline,
+              peer_group_stats=peer_stats
+          )
+          engineered_features = await self.llm_complete(engineered_prompt)
+
+          # 组合特征
+          ml_features = {
+              'basic': self.parse_json(basic_features),
+              'engineered': self.parse_csv(engineered_features),
+              'feature_matrix': self.create_feature_matrix(
+                  basic_features, engineered_features
+              )
+          }
+
+          return ml_features
+
+      async def extract_dl_features(self, logs: str) -> Dict:
+          """提取DL特征"""
+
+          dl_features = {}
+
+          # 序列表示
+          sequence_prompt = self.prompts['dl_sequence'].format(
+              behavior_logs=logs,
+              max_len=self.config['dl']['max_seq_length'],
+              vocab_size=self.config['dl']['vocab_size'],
+              embed_dim=self.config['dl']['embedding_dim']
+          )
+          dl_features['sequences'] = await self.llm_complete(sequence_prompt)
+
+          # 图像表示（可选）
+          if self.config.get('dl', {}).get('use_cnn', False):
+              image_prompt = self.prompts['dl_image'].format(
+                  behavior_sequence=logs,
+                  time_window='24h',
+                  resolution=self.config['dl']['image_size']
+              )
+              dl_features['images'] = await self.llm_complete(image_prompt)
+
+          # 图表示（可选）
+          if self.config.get('dl', {}).get('use_gnn', False):
+              graph_prompt = self.prompts['dl_graph'].format(
+                  behavior_data=logs
+              )
+              dl_features['graphs'] = await self.llm_complete(graph_prompt)
+
+          return dl_features
+
+      async def extract_rl_features(self, logs: str) -> Dict:
+          """提取RL特征"""
+
+          # 获取安全约束
+          constraints = await self.get_security_constraints()
+
+          # MDP定义
+          mdp_prompt = self.prompts['rl_mdp'].format(
+              behavior_sequence=logs,
+              security_constraints=constraints
+          )
+          mdp_features = await self.llm_complete(mdp_prompt)
+
+          # 策略学习特征
+          policy_prompt = self.prompts['rl_policy'].format(
+              trajectory_data=logs,
+              expert_demonstrations=await self.get_expert_demos()
+          )
+          policy_features = await self.llm_complete(policy_prompt)
+
+          # 安全RL特征（可选）
+          safe_features = None
+          if self.config.get('rl', {}).get('use_safety', True):
+              safe_prompt = self.prompts['rl_safe'].format(
+                  behavior_data=logs,
+                  safety_specifications=constraints
+              )
+              safe_features = await self.llm_complete(safe_prompt)
+
+          return {
+              'mdp': self.parse_json(mdp_features),
+              'policy': self.parse_json(policy_features),
+              'safety': self.parse_json(safe_features) if safe_features else None
+          }
+
+      async def validate_features(self, features: Dict, feature_type: str) -> Dict:
+          """验证特征质量"""
+
+          validation_prompt = self.prompts['validation'].format(
+              extracted_features=json.dumps(features, indent=2),
+              feature_type=feature_type.upper()
+          )
+
+          validation_result = await self.llm_complete(validation_prompt)
+          return self.parse_json(validation_result)
+
+      async def llm_complete(self, prompt: str) -> str:
+          """调用LLM完成prompt"""
+
+          # 检查缓存
+          prompt_hash = hash(prompt[:100])  # 使用前100字符作为缓存键
+          if prompt_hash in self.cache:
+              return self.cache[prompt_hash]
+
+          # 调用LLM
+          response = await self.llm.complete(prompt)
+
+          # 缓存结果
+          self.cache[prompt_hash] = response
+
+          return response
+
+      def parse_json(self, response: str) -> Dict:
+          """解析JSON响应"""
+          try:
+              # 清理响应（去除markdown标记等）
+              cleaned = response.strip()
+              if cleaned.startswith('```json'):
+                  cleaned = cleaned[7:]
+              if cleaned.endswith('```'):
+                  cleaned = cleaned[:-3]
+
+              return json.loads(cleaned)
+          except json.JSONDecodeError as e:
+              print(f"JSON解析错误: {e}")
+              return {}
+
+      def parse_csv(self, response: str) -> pd.DataFrame:
+          """解析CSV响应"""
+          try:
+              # 清理响应
+              cleaned = response.strip()
+              if cleaned.startswith('```csv'):
+                  cleaned = cleaned[6:]
+              if cleaned.endswith('```'):
+                  cleaned = cleaned[:-3]
+
+              # 转换为DataFrame
+              from io import StringIO
+              return pd.read_csv(StringIO(cleaned))
+          except Exception as e:
+              print(f"CSV解析错误: {e}")
+              return pd.DataFrame()
+
+      def create_feature_matrix(self, basic: str, engineered: str) -> np.ndarray:
+          """创建特征矩阵"""
+          # 解析特征
+          basic_dict = self.parse_json(basic)
+          engineered_df = self.parse_csv(engineered)
+
+          # 展平基础特征
+          basic_values = []
+          for category in basic_dict.values():
+              if isinstance(category, dict):
+                  for value in category.values():
+                      if isinstance(value, (int, float)):
+                          basic_values.append(value)
+
+          # 合并工程特征
+          if not engineered_df.empty:
+              engineered_values = engineered_df['feature_value'].values
+              all_features = np.concatenate([basic_values, engineered_values])
+          else:
+              all_features = np.array(basic_values)
+
+          return all_features.reshape(1, -1)  # 返回行向量
+
+      def generate_feature_report(self, results: Dict) -> str:
+          """生成特征提取报告"""
+
+          report = []
+          report.append("=" * 50)
+          report.append("特征提取报告")
+          report.append("=" * 50)
+
+          # 元数据
+          report.append(f"\n时间: {results['metadata']['timestamp']}")
+          report.append(f"日志大小: {results['metadata']['log_size']} 字符")
+          report.append(f"目标模型: {', '.join(results['metadata']['target_models'])}")
+
+          # 特征统计
+          report.append("\n特征统计:")
+          for model_type, features in results['features'].items():
+              report.append(f"\n{model_type.upper()}特征:")
+              if isinstance(features, dict):
+                  for key, value in features.items():
+                      if value is not None:
+                          if isinstance(value, dict):
+                              report.append(f"  - {key}: {len(value)} 个特征类别")
+                          elif isinstance(value, pd.DataFrame):
+                              report.append(f"  - {key}: {value.shape} 维度")
+                          elif isinstance(value, np.ndarray):
+                              report.append(f"  - {key}: {value.shape} 形状")
+
+          # 验证结果
+          if 'validation' in results:
+              report.append("\n验证结果:")
+              for model_type, validation in results['validation'].items():
+                  if validation and isinstance(validation, dict):
+                      report.append(f"\n{model_type.upper()}:")
+                      if 'recommendations' in validation:
+                          report.append("  推荐:")
+                          for rec_type, recs in validation['recommendations'].items():
+                              report.append(f"    - {rec_type}: {len(recs)} 条建议")
+
+          return "\n".join(report)
+
+      # 辅助方法
+      async def get_user_baseline(self, logs: str) -> str:
+          """获取用户基线行为"""
+          # 实际应用中从数据库获取
+          return "用户历史平均行为模式"
+
+      async def get_peer_group_stats(self, logs: str) -> str:
+          """获取同组用户统计"""
+          # 实际应用中从数据库获取
+          return "同角色用户群体统计"
+
+      async def get_security_constraints(self) -> str:
+          """获取安全约束"""
+          return "不允许未授权访问，限制数据外泄"
+
+      async def get_expert_demos(self) -> str:
+          """获取专家演示"""
+          return "专家行为轨迹示例"
+
+
+  # 使用示例
+  async def main():
+      """
+      完整的使用示例
+      """
+
+      # 初始化LLM客户端（伪代码）
+      class MockLLMClient:
+          async def complete(self, prompt):
+              # 实际使用时替换为真实的LLM API调用
+              await asyncio.sleep(0.1)  # 模拟网络延迟
+              return '{"test": "response"}'
+
+      llm_client = MockLLMClient()
+
+      # 创建特征提取器
+      extractor = UnifiedFeatureExtractor(
+          llm_client=llm_client,
+          config={
+              'ml': {
+                  'feature_types': ['basic', 'engineered'],
+                  'scaling': 'robust'
+              },
+              'dl': {
+                  'max_seq_length': 256,
+                  'vocab_size': 5000,
+                  'embedding_dim': 64,
+                  'use_cnn': True,
+                  'use_gnn': True
+              },
+              'rl': {
+                  'state_dim': 64,
+                  'action_dim': 20,
+                  'use_safety': True
+              }
+          }
+      )
+
+      # 示例日志数据
+      behavior_logs = """
+      2024-01-20 09:00:00 user_alice login system_a success
+      2024-01-20 09:00:30 user_alice query database_1 select_all
+      2024-01-20 09:01:00 user_alice download file_report.pdf 5MB
+      2024-01-20 09:02:00 user_alice logout system_a success
+      """
+
+      # 提取所有特征
+      print("开始特征提取...")
+      results = await extractor.extract_all_features(
+          behavior_logs=behavior_logs,
+          target_models=['ml', 'dl', 'rl'],
+          validate=True
+      )
+
+      # 打印报告
+      print(results['report'])
+
+      # 保存特征
+      with open('extracted_features.json', 'w') as f:
+          json.dump(results, f, indent=2, default=str)
+
+      print("\n特征已保存到 extracted_features.json")
+
+      # 特定模型的特征使用
+      if 'ml' in results['features']:
+          ml_features = results['features']['ml']
+          print(f"\nML特征矩阵形状: {ml_features.get('feature_matrix', np.array([])).shape}")
+
+      if 'dl' in results['features']:
+          dl_features = results['features']['dl']
+          print(f"\nDL序列特征: {dl_features.get('sequences', {})}")
+
+      if 'rl' in results['features']:
+          rl_features = results['features']['rl']
+          print(f"\nRL MDP定义: {rl_features.get('mdp', {})}")
+
+      return results
+
+
+  # 运行示例
+  if __name__ == "__main__":
+      # 运行异步主函数
+      results = asyncio.run(main())
+
+      print("\n特征提取完成!")
+      print(f"提取了 {len(results['features'])} 种类型的特征")
+
+      # 后续可以将特征用于模型训练
+      # ml_model.fit(results['features']['ml']['feature_matrix'])
+      # dl_model.fit(results['features']['dl']['sequences'])
+      # rl_agent.train(results['features']['rl']['mdp'])
+
+  实际部署建议
+
+  # deployment_config.yaml
+  """
+  feature_extraction:
+    llm:
+      provider: "openai"  # 或 "anthropic", "local"
+      model: "gpt-4"
+      temperature: 0.1  # 低温度提高一致性
+      max_tokens: 4000
+      
+    caching:
+      enabled: true
+      ttl_seconds: 3600
+      max_size_mb: 1000
+      
+    batch_processing:
+      batch_size: 100
+      parallel_requests: 5
+      timeout_seconds: 30
+      
+    monitoring:
+      log_level: "INFO"
+      metrics_enabled: true
+      alert_threshold: 0.95
+      
+    optimization:
+      use_compression: true
+      quantization: "int8"
+      pruning_ratio: 0.1
+  """
+
+  class ProductionFeatureExtractor(UnifiedFeatureExtractor):
+      """
+      生产环境优化版本
+      """
+
+      def __init__(self, config_file='deployment_config.yaml'):
+          # 加载配置
+          import yaml
+          with open(config_file) as f:
+              self.prod_config = yaml.safe_load(f)
+
+          super().__init__(
+              llm_client=self.create_llm_client(),
+              config=self.prod_config.get('feature_extraction', {})
+          )
+
+          # 初始化监控
+          self.setup_monitoring()
+
+      def setup_monitoring(self):
+          """设置监控和日志"""
+          import logging
+          from prometheus_client import Counter, Histogram, Gauge
+
+          # 配置日志
+          logging.basicConfig(
+              level=self.prod_config['feature_extraction']['monitoring']['log_level']
+          )
+          self.logger = logging.getLogger(__name__)
+
+          # Prometheus指标
+          self.extraction_counter = Counter(
+              'feature_extraction_total',
+              'Total feature extractions',
+              ['model_type', 'status']
+          )
+
+          self.extraction_duration = Histogram(
+              'feature_extraction_duration_seconds',
+              'Feature extraction duration',
+              ['model_type']
+          )
+
+          self.cache_hit_rate = Gauge(
+              'feature_cache_hit_rate',
+              'Cache hit rate'
+          )
+
+⏺ Update Todos
+  ⎿  ☒ 重新设计ML特征提取Prompt - 更精准和实用    
+     ☒ 重新设计DL特征提取Prompt - 优化序列表示
+     ☒ 重新设计RL特征提取Prompt - 强化状态动作映射
+     ☒ 设计统一的特征验证框架
+     ☒ 创建端到端的使用示例
+
+⏺ 总结
+
+  我已经完成了ML、DL、RL特征提取Prompt的全面重新设计：
+
+  主要改进
+
+  1. ML特征：
+    - 更细粒度的统计特征分类
+    - 明确的数值类型和范围
+    - 包含安全指标和网络特征
+  2. DL特征：
+    - 完整的序列tokenization方案
+    - 多种图像表示方法(谱图、递归图、GAF等)
+    - 支持GNN的图结构表示
+  3. RL特征：
+    - 清晰的MDP五元组定义
+    - 支持多种RL算法的特征
+    - 包含安全强化学习要素
+  4. 统一验证框架：
+    - 数据质量检查
+    - 统计验证
+    - 模型特定验证
+  5. 端到端示例：
+    - 完整的异步处理流程
+    - 缓存和优化机制
+    - 生产部署配置
+
+  使用建议
+
+  1. 选择合适的Prompt：根据目标模型选择对应的特征提取Prompt
+  2. 分阶段处理：大规模数据建议分批处理
+  3. 验证必不可少：始终验证提取的特征质量
+  4. 缓存优化：相似日志复用特征结果
+  5. 监控指标：生产环境需要完善的监控
