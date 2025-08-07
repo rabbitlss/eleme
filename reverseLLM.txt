@@ -1,0 +1,647 @@
+阶段1：数据输入和初步分析Prompt
+
+  STAGE1_INITIAL_DATA_ANALYSIS_PROMPT = """
+  你是一个资深的数据科学家，专注于安全数据分析。请对以下数据进行初步分析，给出你的直观判断。
+
+  ## 原始数据样本
+  {raw_data_sample}
+
+  ## 数据基本信息
+  - 数据类型: {data_type}
+  - 时间范围: {time_range}
+  - 样本数量: {sample_count}
+  - 业务背景: {business_context}
+
+  ## 请完成以下分析
+
+  ### 1. 第一印象分析
+  请用你的直觉和经验，快速给出对这个数据集的第一印象：
+
+  ```json
+  {
+      "overall_assessment": {
+          "data_complexity": "simple/moderate/complex",
+          "pattern_visibility": "obvious/subtle/hidden",
+          "anomaly_indication": "clear_anomalies/potential_anomalies/no_obvious_anomalies",
+          "data_quality": "excellent/good/fair/poor",
+          "analysis_confidence": "high/medium/low"
+      },
+
+      "immediate_observations": [
+          "观察到的明显模式或特征",
+          "任何异常或可疑的数据点",
+          "数据分布的直观感受"
+      ]
+  }
+
+  2. 总体分析结论
+
+  基于这个数据样本，请给出你的总体分析结论：
+
+  {
+      "primary_conclusions": [
+          "主要结论1：关于数据性质的判断",
+          "主要结论2：关于潜在问题的识别",
+          "主要结论3：关于分析方向的建议"
+      ],
+
+      "recommended_approach": {
+          "analysis_type": "supervised/unsupervised/semi-supervised",
+          "model_category": "classification/regression/clustering/anomaly_detection",
+          "complexity_level": "simple_statistical/traditional_ml/deep_learning",
+          "priority_focus": "accuracy/interpretability/speed/scalability"
+      },
+
+      "key_challenges": [
+          "识别到的主要分析挑战",
+          "可能的技术难点",
+          "需要特别关注的方面"
+      ],
+
+      "confidence_level": {
+          "analysis_reliability": "0.0-1.0",
+          "conclusion_certainty": "0.0-1.0",
+          "recommendation_confidence": "0.0-1.0"
+      }
+  }
+
+  3. 初步模型倾向
+
+  基于直观分析，你倾向于推荐什么类型的模型？
+
+  {
+      "model_intuition": {
+          "first_choice": "模型名称",
+          "reasoning": "选择这个模型的直观原因",
+          "alternatives": ["备选模型1", "备选模型2"],
+          "avoid_models": ["不推荐的模型类型"]
+      },
+
+      "feature_importance_guess": {
+          "most_important": ["你认为最重要的特征或特征类型"],
+          "potentially_irrelevant": ["可能不重要的特征"],
+          "need_engineering": ["需要特征工程的方面"]
+      }
+  }
+
+  请不要进行深度的统计分析，只需要给出你作为专家的直观判断和经验判断。
+  """
+
+  阶段2：分析思路解释Prompt
+
+  STAGE2_REASONING_EXPLANATION_PROMPT = """
+  现在请详细解释你在阶段1中的分析思路和推理过程。
+
+  ## 你的阶段1分析结果回顾
+  ```json
+  {stage1_results}
+
+  请深入解释你的分析思路
+
+  1. 推理过程解析
+
+  请一步步解释你是如何得出结论的：
+
+  {
+      "reasoning_chain": [
+          {
+              "step": 1,
+              "observation": "我首先观察到了什么",
+              "interpretation": "这个观察意味着什么",
+              "conclusion": "因此我得出了什么结论",
+              "confidence": "对这一步的信心程度(0-1)"
+          },
+          {
+              "step": 2,
+              "observation": "接下来我注意到...",
+              "interpretation": "这表明...",
+              "conclusion": "所以我认为...",
+              "confidence": "信心程度"
+          }
+          // 继续其他推理步骤
+      ],
+
+      "decision_factors": {
+          "most_influential": [
+              {
+                  "factor": "影响决策的最重要因素",
+                  "weight": "权重(0-1)",
+                  "reasoning": "为什么这个因素重要"
+              }
+          ],
+          "secondary_factors": [
+              {
+                  "factor": "次要因素",
+                  "weight": "权重",
+                  "reasoning": "作用说明"
+              }
+          ]
+      }
+  }
+
+  2. 模式识别逻辑
+
+  解释你是如何识别数据模式的：
+
+  {
+      "pattern_recognition": {
+          "normal_patterns": {
+              "identified_patterns": ["识别到的正常模式"],
+              "recognition_basis": ["基于什么特征识别的"],
+              "confidence_indicators": ["什么让你确信这是正常模式"]
+          },
+
+          "anomaly_patterns": {
+              "suspected_anomalies": ["疑似异常模式"],
+              "anomaly_indicators": ["异常的特征指标"],
+              "false_positive_concerns": ["可能的误报担忧"]
+          },
+
+          "pattern_complexity": {
+              "simple_rules": ["能用简单规则描述的模式"],
+              "complex_relationships": ["需要复杂模型的关系"],
+              "temporal_dependencies": ["时间相关的模式"]
+          }
+      }
+  }
+
+  3. 假设和前提
+
+  说明你分析中的假设和前提条件：
+
+  {
+      "assumptions": {
+          "data_assumptions": [
+              "关于数据质量的假设",
+              "关于数据完整性的假设",
+              "关于数据代表性的假设"
+          ],
+
+          "domain_assumptions": [
+              "关于业务场景的假设",
+              "关于用户行为的假设",
+              "关于安全威胁的假设"
+          ],
+
+          "model_assumptions": [
+              "关于模型适用性的假设",
+              "关于特征独立性的假设",
+              "关于数据分布的假设"
+          ]
+      },
+
+      "assumption_risks": [
+          {
+              "assumption": "具体假设",
+              "risk_if_wrong": "如果假设错误的风险",
+              "verification_method": "如何验证这个假设"
+          }
+      ]
+  }
+
+  4. 分析盲点和不确定性
+
+  诚实地指出你分析中的盲点：
+
+  {
+      "analysis_limitations": {
+          "data_limitations": [
+              "数据样本可能的局限性",
+              "缺失信息对分析的影响",
+              "样本代表性的担忧"
+          ],
+
+          "knowledge_gaps": [
+              "你不确定的方面",
+              "需要领域专家确认的点",
+              "可能的认知盲点"
+          ],
+
+          "methodological_concerns": [
+              "分析方法的局限性",
+              "可能的偏见来源",
+              "结论的适用范围"
+          ]
+      },
+
+      "uncertainty_quantification": {
+          "high_confidence_conclusions": ["你很确信的结论"],
+          "medium_confidence_conclusions": ["中等确信的结论"],
+          "low_confidence_conclusions": ["不太确定的结论"],
+          "speculative_conclusions": ["推测性的结论"]
+      }
+  }
+
+  通过这个解释，帮助我们理解你的分析逻辑，找出可能的改进点。
+  """
+
+  阶段3：倒推数据需求Prompt
+
+  STAGE3_REVERSE_ENGINEERING_PROMPT = """
+  基于你前两个阶段的分析思路，现在让我们倒推需要什么原始数据和分析步骤。
+
+  ## 前期分析回顾
+  阶段1结论：
+  ```json
+  {stage1_results}
+
+  阶段2推理过程：
+  {stage2_reasoning}
+
+  倒推分析需求
+
+  1. 关键决策点的数据需求
+
+  对于你的每个关键判断，倒推需要什么数据支撑：
+
+  {
+      "decision_data_mapping": [
+          {
+              "key_decision": "你做出的关键判断",
+              "required_raw_data": [
+                  "需要的原始数据类型1",
+                  "需要的原始数据类型2"
+              ],
+              "data_granularity": "minute/hour/day/session级别",
+              "minimum_sample_size": "最小样本需求",
+              "data_quality_requirements": [
+                  "完整性要求",
+                  "准确性要求",
+                  "时效性要求"
+              ]
+          }
+      ]
+  }
+
+  2. 分析流程的逐步分解
+
+  将你的分析思路分解为具体的计算步骤：
+
+  {
+      "analysis_pipeline": {
+          "stage_1_data_ingestion": {
+              "description": "数据摄入和初步清洗",
+              "input_requirements": [
+                  "原始日志格式要求",
+                  "数据传输方式",
+                  "实时性要求"
+              ],
+              "processing_steps": [
+                  "具体的数据处理步骤1",
+                  "具体的数据处理步骤2"
+              ],
+              "output": "这一阶段的输出格式",
+              "quality_checks": ["数据质量检查项"]
+          },
+
+          "stage_2_feature_extraction": {
+              "description": "特征提取和工程",
+              "input": "上一阶段的输出",
+              "extraction_logic": [
+                  {
+                      "feature_type": "统计特征",
+                      "calculation_method": "具体计算方法",
+                      "window_size": "时间窗口大小",
+                      "required_fields": ["需要的原始字段"]
+                  }
+              ],
+              "feature_validation": ["特征有效性检查"],
+              "output": "特征矩阵格式"
+          },
+
+          "stage_3_pattern_analysis": {
+              "description": "模式分析和异常检测",
+              "algorithms_needed": [
+                  {
+                      "algorithm": "算法名称",
+                      "purpose": "用途说明",
+                      "input_requirements": "输入要求",
+                      "parameter_tuning": "参数调优方法"
+                  }
+              ],
+              "baseline_establishment": "基线建立方法",
+              "anomaly_thresholds": "异常阈值设定逻辑"
+          }
+      }
+  }
+
+  3. 最小可行数据集定义
+
+  定义支撑你分析结论的最小数据集：
+
+  {
+      "minimal_viable_dataset": {
+          "core_data_points": [
+              {
+                  "data_type": "用户行为日志",
+                  "required_fields": ["timestamp", "user_id", "action", "resource"],
+                  "minimum_timespan": "至少需要多长时间的数据",
+                  "minimum_sample_count": "最少样本数",
+                  "update_frequency": "数据更新频率要求"
+              }
+          ],
+
+          "supplementary_data": [
+              {
+                  "data_type": "用户画像数据",
+                  "necessity": "nice_to_have/important/critical",
+                  "impact_if_missing": "缺失情况下的影响"
+              }
+          ],
+
+          "external_context": [
+              {
+                  "context_type": "威胁情报",
+                  "integration_method": "如何整合这些外部数据",
+                  "update_requirements": "更新频率要求"
+              }
+          ]
+      }
+  }
+
+  4. 验证和迭代机制
+
+  设计验证你分析假设的机制：
+
+  {
+      "validation_framework": {
+          "hypothesis_testing": [
+              {
+                  "hypothesis": "你的一个关键假设",
+                  "test_method": "验证方法",
+                  "success_criteria": "成功标准",
+                  "data_requirements": "验证所需的数据"
+              }
+          ],
+
+          "feedback_loops": [
+              {
+                  "feedback_source": "反馈来源",
+                  "feedback_frequency": "反馈频率",
+                  "adjustment_mechanism": "基于反馈的调整机制"
+              }
+          ],
+
+          "model_monitoring": [
+              {
+                  "monitor_metric": "监控指标",
+                  "alert_threshold": "告警阈值",
+                  "remediation_action": "修复措施"
+              }
+          ]
+      }
+  }
+
+  5. 实施优先级建议
+
+  基于重要性和实现难度，给出实施建议：
+
+  {
+      "implementation_roadmap": {
+          "phase_1_critical": {
+              "duration": "预估时间",
+              "components": ["必须首先实现的组件"],
+              "success_metrics": ["第一阶段成功指标"],
+              "risks": ["主要风险点"]
+          },
+
+          "phase_2_important": {
+              "duration": "预估时间",
+              "components": ["重要但非紧急的组件"],
+              "dependencies": ["依赖的第一阶段成果"],
+              "expected_improvement": ["预期改进效果"]
+          },
+
+          "phase_3_enhancement": {
+              "duration": "预估时间",
+              "components": ["增强功能组件"],
+              "optional_features": ["可选功能"],
+              "future_extensions": ["未来扩展方向"]
+          }
+      }
+  }
+
+  通过这个倒推过程，我们可以清楚地知道：
+  1. 需要收集什么数据
+  2. 如何处理这些数据
+  3. 每一步分析的具体方法
+  4. 如何验证分析结果的正确性
+  """
+
+  完整的反向工程分析系统
+
+  class ReverseEngineeringAnalyzer:
+      """
+      反向工程数据分析系统
+      通过三阶段分析，从LLM的直觉判断倒推出完整的分析流程
+      """
+
+      def __init__(self, llm_client):
+          self.llm = llm_client
+          self.analysis_history = {}
+
+          self.prompts = {
+              'stage1': STAGE1_INITIAL_DATA_ANALYSIS_PROMPT,
+              'stage2': STAGE2_REASONING_EXPLANATION_PROMPT,
+              'stage3': STAGE3_REVERSE_ENGINEERING_PROMPT
+          }
+
+      async def full_reverse_analysis(self, 
+                                      raw_data_sample: str,
+                                      data_context: dict) -> dict:
+          """
+          执行完整的三阶段反向工程分析
+          
+          Args:
+              raw_data_sample: 原始数据样本
+              data_context: 数据上下文信息
+              
+          Returns:
+              完整的分析结果和倒推的流程
+          """
+
+          print("🔍 开始反向工程分析...")
+
+          # 阶段1：初步分析
+          print("📊 阶段1: 初步数据分析...")
+          stage1_result = await self.stage1_initial_analysis(
+              raw_data_sample, data_context
+          )
+
+          # 阶段2：推理解释
+          print("🧠 阶段2: 分析思路解释...")
+          stage2_result = await self.stage2_reasoning_explanation(
+              stage1_result
+          )
+
+          # 阶段3：倒推需求
+          print("🔄 阶段3: 倒推数据需求...")
+          stage3_result = await self.stage3_reverse_engineering(
+              stage1_result, stage2_result
+          )
+
+          # 整合结果
+          final_analysis = self.integrate_analysis_results(
+              stage1_result, stage2_result, stage3_result
+          )
+
+          print("✅ 反向工程分析完成!")
+          return final_analysis
+
+      async def stage1_initial_analysis(self, raw_data: str, context: dict):
+          """阶段1：初步分析"""
+
+          prompt = self.prompts['stage1'].format(
+              raw_data_sample=raw_data,
+              data_type=context.get('data_type', 'security_logs'),
+              time_range=context.get('time_range', '24 hours'),
+              sample_count=context.get('sample_count', 'unknown'),
+              business_context=context.get('business_context', 'security monitoring')
+          )
+
+          response = await self.llm.complete(prompt)
+          return self.parse_json_response(response)
+
+      async def stage2_reasoning_explanation(self, stage1_results):
+          """阶段2：推理解释"""
+
+          prompt = self.prompts['stage2'].format(
+              stage1_results=json.dumps(stage1_results, indent=2)
+          )
+
+          response = await self.llm.complete(prompt)
+          return self.parse_json_response(response)
+
+      async def stage3_reverse_engineering(self, stage1_results, stage2_reasoning):
+          """阶段3：倒推工程"""
+
+          prompt = self.prompts['stage3'].format(
+              stage1_results=json.dumps(stage1_results, indent=2),
+              stage2_reasoning=json.dumps(stage2_reasoning, indent=2)
+          )
+
+          response = await self.llm.complete(prompt)
+          return self.parse_json_response(response)
+
+      def integrate_analysis_results(self, stage1, stage2, stage3):
+          """整合三个阶段的分析结果"""
+
+          return {
+              'meta_info': {
+                  'analysis_timestamp': datetime.now().isoformat(),
+                  'analysis_method': 'reverse_engineering',
+                  'stages_completed': 3
+              },
+
+              'initial_assessment': stage1,
+              'reasoning_process': stage2,
+              'derived_requirements': stage3,
+
+              'actionable_insights': {
+                  'immediate_actions': self.extract_immediate_actions(stage3),
+                  'data_collection_plan': self.extract_data_plan(stage3),
+                  'analysis_pipeline': self.extract_pipeline(stage3),
+                  'validation_framework': self.extract_validation(stage3)
+              },
+
+              'confidence_analysis': {
+                  'high_confidence_conclusions': self.extract_high_confidence(stage1, stage2),
+                  'areas_of_uncertainty': self.extract_uncertainties(stage2),
+                  'validation_priorities': self.prioritize_validations(stage3)
+              }
+          }
+
+      def generate_implementation_guide(self, analysis_results):
+          """基于分析结果生成实施指南"""
+
+          guide = {
+              'executive_summary': self.create_executive_summary(analysis_results),
+              'technical_requirements': self.extract_tech_requirements(analysis_results),
+              'implementation_phases': self.create_implementation_phases(analysis_results),
+              'risk_mitigation': self.create_risk_mitigation_plan(analysis_results),
+              'success_metrics': self.define_success_metrics(analysis_results)
+          }
+
+          return guide
+
+      # 辅助方法
+      def parse_json_response(self, response: str) -> dict:
+          """解析LLM的JSON响应"""
+          try:
+              # 清理和解析JSON
+              cleaned = response.strip()
+              if '```json' in cleaned:
+                  json_start = cleaned.find('```json') + 7
+                  json_end = cleaned.find('```', json_start)
+                  cleaned = cleaned[json_start:json_end].strip()
+
+              return json.loads(cleaned)
+          except Exception as e:
+              logging.error(f"JSON解析失败: {e}")
+              return {'error': 'parsing_failed', 'raw_response': response}
+
+
+  # 使用示例
+  async def demonstrate_reverse_engineering():
+      """演示反向工程分析过程"""
+
+      # 模拟原始数据样本
+      sample_data = """
+      2024-01-20 09:15:23 user_alice login system_portal success src_ip=192.168.1.100
+      2024-01-20 09:15:45 user_alice navigate /dashboard success
+      2024-01-20 09:16:12 user_alice query customer_db SELECT * FROM customers WHERE id>1000 
+      2024-01-20 09:18:34 user_alice download report_jan_2024.csv 2.5MB
+      2024-01-20 09:19:01 user_alice logout system_portal success
+      
+      2024-01-20 10:22:15 user_bob login system_portal failed src_ip=10.0.0.50
+      2024-01-20 10:22:18 user_bob login system_portal failed src_ip=10.0.0.50
+      2024-01-20 10:22:23 user_bob login system_portal success src_ip=10.0.0.50
+      2024-01-20 10:22:45 user_bob navigate /admin success
+      2024-01-20 10:23:12 user_bob query user_db SELECT * FROM users
+      2024-01-20 10:25:30 user_bob modify user_permissions SET admin=1 WHERE user_id=12345
+      2024-01-20 10:26:45 user_bob download user_export.csv 15MB
+      2024-01-20 10:27:12 user_bob clear_logs DELETE FROM access_logs WHERE timestamp < '2024-01-15'
+      2024-01-20 10:27:30 user_bob logout system_portal success
+      
+      2024-01-20 02:15:00 user_system scheduled_backup start backup_job_daily
+      2024-01-20 02:45:30 user_system scheduled_backup complete backup_job_daily 500MB
+      """
+
+      data_context = {
+          'data_type': 'security_access_logs',
+          'time_range': '24 hours',
+          'sample_count': '12 log entries',
+          'business_context': 'Enterprise security monitoring for privileged access'
+      }
+
+      # 创建分析器
+      llm_client = MockLLMClient()  # 替换为实际LLM
+      analyzer = ReverseEngineeringAnalyzer(llm_client)
+
+      # 执行完整分析
+      analysis = await analyzer.full_reverse_analysis(
+          raw_data_sample=sample_data,
+          data_context=data_context
+      )
+
+      # 生成实施指南
+      implementation_guide = analyzer.generate_implementation_guide(analysis)
+
+      print("🎯 分析完成！主要发现:")
+      print(f"- LLM识别的主要模式: {analysis['initial_assessment'].get('immediate_observations', 
+  [])}")
+      print(f"- 推荐的分析方法: {analysis['initial_assessment'].get('recommended_approach', {})}")
+      print(f"- 关键数据需求: {analysis['derived_requirements'].get('minimal_viable_dataset', {})}")
+
+      return analysis, implementation_guide
+
+  if __name__ == "__main__":
+      import asyncio
+      asyncio.run(demonstrate_reverse_engineering())
+
+⏺ Update Todos
+  ⎿  ☒ 设计阶段1：数据输入和初步分析Prompt
+     ☒ 设计阶段2：分析思路解释Prompt
+     ☒ 设计阶段3：倒推数据需求Prompt
+     ☒ 构建完整的反向工程系统
+     ☒ 验证和优化整个流程
