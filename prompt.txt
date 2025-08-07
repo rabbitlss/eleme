@@ -1,1 +1,520 @@
+ML_STATISTICAL_FEATURES_PROMPT = """
+  你是一个数据科学专家，专门从用户行为日志中提取机器学习特征。
 
+  任务：分析以下行为日志，提取适合传统机器学习算法（如XGBoost、RandomForest、SVM）的数值特征。
+
+  输入日志格式说明：
+  - 时间戳 | 用户ID | 动作类型 | 资源对象 | 结果状态 | 附加信息
+
+  行为日志数据：
+  {log_data}
+
+  请提取以下维度的特征，输出严格的JSON格式：
+
+  {
+      "basic_statistics": {
+          "total_events": "事件总数(int)",
+          "unique_users": "唯一用户数(int)",
+          "duration_seconds": "时间跨度秒数(float)",
+          "event_rate_per_minute": "每分钟事件率(float)",
+          "success_rate": "成功率0-1(float)",
+          "failure_rate": "失败率0-1(float)"
+      },
+      
+      "time_features": {
+          "hour_of_day_mode": "最频繁活动小时0-23(int)",
+          "day_of_week_mode": "最频繁活动星期1-7(int)",
+          "is_business_hours": "是否主要在工作时间0/1(int)",
+          "time_entropy": "时间分布熵0-1(float)",
+          "max_events_per_hour": "单小时最大事件数(int)",
+          "min_events_per_hour": "单小时最小事件数(int)",
+          "std_events_per_hour": "每小时事件数标准差(float)",
+          "burst_factor": "突发因子=最大/平均(float)"
+      },
+      
+      "action_features": {
+          "unique_action_types": "独特动作类型数(int)",
+          "most_common_action": "最常见动作(string)",
+          "action_diversity_index": "动作多样性指数0-1(float)",
+          "read_write_ratio": "读写比例(float)",
+          "admin_action_ratio": "管理操作占比0-1(float)",
+          "sensitive_action_count": "敏感操作次数(int)",
+          "action_sequence_complexity": "序列复杂度0-1(float)",
+          "repetition_index": "重复度指数0-1(float)"
+      },
+      
+      "resource_access_features": {
+          "unique_resources": "访问资源种类数(int)",
+          "resource_entropy": "资源访问熵(float)",
+          "top_resource_concentration": "前3资源集中度0-1(float)",
+          "cross_system_access": "跨系统访问次数(int)",
+          "file_type_diversity": "文件类型多样性(int)",
+          "avg_resource_size_mb": "平均资源大小MB(float)",
+          "total_data_accessed_gb": "总访问数据GB(float)",
+          "permission_changes": "权限变更次数(int)"
+      },
+      
+      "behavioral_patterns": {
+          "session_count": "会话数量(int)",
+          "avg_session_length": "平均会话长度秒(float)",
+          "session_regularity": "会话规律性0-1(float)",
+          "velocity_score": "操作速度分数(float)",
+          "consistency_score": "行为一致性分数0-1(float)",
+          "anomaly_score": "异常分数0-100(float)",
+          "risk_score": "风险分数0-100(float)",
+          "privilege_use_score": "权限使用分数0-100(float)"
+      },
+      
+      "network_features": {
+          "unique_ips": "唯一IP数(int)",
+          "unique_ports": "唯一端口数(int)",
+          "bytes_uploaded": "上传字节数(int)",
+          "bytes_downloaded": "下载字节数(int)",
+          "connection_count": "连接次数(int)",
+          "avg_connection_duration": "平均连接时长秒(float)",
+          "external_connections": "外部连接数(int)",
+          "dns_query_count": "DNS查询次数(int)"
+      },
+      
+      "security_indicators": {
+          "failed_auth_count": "认证失败次数(int)",
+          "suspicious_pattern_count": "可疑模式次数(int)",
+          "policy_violation_count": "策略违规次数(int)",
+          "after_hours_activity": "非工作时间活动0/1(int)",
+          "rapid_fire_actions": "快速连续操作0/1(int)",
+          "data_exfiltration_risk": "数据外泄风险0-1(float)",
+          "lateral_movement_indicator": "横向移动指标0-1(float)",
+          "persistence_indicator": "持久化指标0-1(float)"
+      }
+  }
+
+  要求：
+  1. 所有数值特征必须是可计算的具体数字
+  2. 字符串类型只用于类别特征
+  3. 缺失值用-1表示
+  4. 比率和概率值归一化到[0,1]
+  5. 分数类特征归一化到[0,100]
+  """
+
+  ### 2. 高级工程特征
+
+  ```python
+  ML_ENGINEERED_FEATURES_PROMPT = """
+  基于已提取的基础特征，生成高级工程特征用于机器学习模型。
+
+  基础特征：
+  {basic_features}
+
+  用户历史基线：
+  {user_baseline}
+
+  同组用户特征：
+  {peer_group_stats}
+
+  生成以下高级特征（CSV格式输出）：
+
+  feature_name,feature_value,feature_type,computation_method,importance_hint
+  # 时序特征
+  time_since_last_event,数值,continuous,当前时间-上次事件时间,high
+  event_acceleration,数值,continuous,事件频率二阶导数,medium
+  periodic_strength,数值,continuous,FFT主频强度,medium
+  weekend_vs_weekday_ratio,数值,continuous,周末/工作日活动比,low
+
+  # 统计衍生特征  
+  zscore_event_rate,数值,continuous,(当前-均值)/标准差,high
+  percentile_rank_activity,数值,continuous,在所有用户中的百分位,high
+  mahalanobis_distance,数值,continuous,多维异常距离,high
+  isolation_score,数值,continuous,孤立森林异常分数,high
+
+  # 比较特征
+  deviation_from_baseline,数值,continuous,与个人基线偏差,high
+  peer_group_deviation,数值,continuous,与同组偏差,medium
+  temporal_deviation,数值,continuous,与历史同期偏差,medium
+  role_based_deviation,数值,continuous,与角色标准偏差,high
+
+  # 序列特征
+  markov_transition_prob,数值,continuous,状态转移概率,high
+  sequence_entropy,数值,continuous,动作序列熵,medium
+  longest_common_subsequence,数值,discrete,与正常模式LCS长度,medium
+  edit_distance_to_normal,数值,discrete,与正常序列编辑距离,medium
+
+  # 图特征
+  pagerank_score,数值,continuous,在用户-资源图中的PageRank,low
+  betweenness_centrality,数值,continuous,介数中心性,medium
+  clustering_coefficient,数值,continuous,聚类系数,low
+  community_id,数值,categorical,所属社区ID,medium
+
+  # 交互特征
+  user_hour_interaction,数值,continuous,用户ID*活动小时,low
+  action_resource_interaction,数值,continuous,动作类型*资源类型,medium
+  velocity_burst_interaction,数值,continuous,速度*突发因子,high
+  risk_time_interaction,数值,continuous,风险分数*时间异常,high
+
+  # 聚合特征
+  rolling_mean_1h,数值,continuous,1小时滚动均值,medium
+  rolling_std_24h,数值,continuous,24小时滚动标准差,medium
+  ewma_event_rate,数值,continuous,指数加权移动平均,high
+  cumsum_sensitive_actions,数值,continuous,敏感操作累计和,high
+
+  # 编码特征
+  user_id_encoded,数值,categorical,目标编码用户ID,medium
+  action_type_encoded,数值,categorical,频率编码动作类型,medium
+  resource_hash,数值,categorical,资源组合哈希,low
+  time_bin,数值,ordinal,时间分箱(早中晚夜),low
+
+  注意：
+  1. importance_hint: high/medium/low 表示特征重要性建议
+  2. 所有continuous特征需要标准化
+  3. categorical特征需要编码处理
+  4. 交互特征仅选择相关性高的组合
+  """
+
+⏺ Update Todos
+  ⎿  ☒ 重新设计ML特征提取Prompt - 更精准和实用    
+     ☐ 重新设计DL特征提取Prompt - 优化序列表示
+     ☐ 重新设计RL特征提取Prompt - 强化状态动作映射
+     ☐ 设计统一的特征验证框架
+     ☐ 创建端到端的使用示例
+
+⏺ 二、DL特征提取Prompt - 重新设计版
+
+  1. 序列表示提取
+
+  DL_SEQUENCE_REPRESENTATION_PROMPT = """
+  你是一个深度学习专家，将行为日志转换为神经网络可处理的序列表示。
+
+  任务：生成适合LSTM、Transformer、BERT等模型的序列特征。
+
+  输入日志：
+  {behavior_logs}
+
+  配置参数：
+  - max_sequence_length: {max_len}  # 默认512
+  - vocab_size_limit: {vocab_size}  # 默认10000
+  - embedding_dim: {embed_dim}       # 默认128
+
+  输出以下格式的序列表示：
+
+  {
+      "tokenized_sequences": {
+          "action_tokens": [
+              [1, 45, 23, 67, 89, 2, 0, 0],  # 第一个序列，0是padding
+              [1, 34, 56, 78, 90, 12, 2, 0]   # 第二个序列
+          ],
+          "token_vocabulary": {
+              "PAD": 0,
+              "START": 1,
+              "END": 2,
+              "login": 45,
+              "query": 23,
+              "download": 67,
+              "...": "..."
+          },
+          "sequence_lengths": [6, 7],  # 实际长度（不含padding）
+          "attention_masks": [
+              [1, 1, 1, 1, 1, 1, 0, 0],
+              [1, 1, 1, 1, 1, 1, 1, 0]
+          ]
+      },
+      
+      "temporal_encoding": {
+          "time_deltas": [
+              [0, 30, 45, 120, 180, 240, 0, 0],  # 时间间隔(秒)
+              [0, 15, 60, 90, 150, 300, 360, 0]
+          ],
+          "positional_encodings": [
+              [[sin/cos位置编码向量]],  # shape: [seq_len, embed_dim]
+              [[sin/cos位置编码向量]]
+          ],
+          "time_features": [
+              {
+                  "hour": [9, 9, 9, 10, 10, 10, 0, 0],
+                  "day_of_week": [1, 1, 1, 1, 1, 1, 0, 0],
+                  "is_weekend": [0, 0, 0, 0, 0, 0, 0, 0]
+              }
+          ]
+      },
+      
+      "contextual_embeddings": {
+          "user_embeddings": [[用户嵌入向量]], # shape: [batch, embed_dim]
+          "role_embeddings": [[角色嵌入向量]],
+          "session_embeddings": [[会话嵌入向量]],
+          "concatenated_context": [[拼接的上下文向量]]  # 用于条件生成
+      },
+      
+      "sequence_features": {
+          "subword_tokens": [  # 用于处理未见过的动作
+              ["log", "##in"],
+              ["down", "##load"]
+          ],
+          "character_level": [  # 字符级表示
+              [[108, 111, 103, 105, 110]],  # "login"的ASCII
+              [[100, 111, 119, 110, 108, 111, 97, 100]]  # "download"
+          ],
+          "n_grams": {
+              "bigrams": [["login_query", "query_download"]],
+              "trigrams": [["login_query_download"]]
+          },
+          "skip_grams": [  # 跳跃连接
+              ["login_download", "query_export"]
+          ]
+      },
+      
+      "hierarchical_representation": {
+          "action_level": [[动作级特征]],     # 最细粒度
+          "session_level": [[会话级特征]],    # 中等粒度
+          "user_day_level": [[用户日级特征]], # 粗粒度
+          "attention_weights": {
+              "action_to_session": [[权重矩阵]],
+              "session_to_day": [[权重矩阵]]
+          }
+      },
+      
+      "data_augmentation": {
+          "masked_sequences": [  # 用于MLM训练
+              [1, 45, "[MASK]", 67, 89, 2],
+              [1, "[MASK]", 56, 78, "[MASK]", 12, 2]
+          ],
+          "corrupted_sequences": [  # 用于去噪自编码器
+              [1, 45, 99, 67, 89, 2],  # 99是噪声token
+              [1, 88, 56, 78, 77, 12, 2]
+          ],
+          "augmentation_labels": [
+              [0, 0, 1, 0, 0, 0],  # 1表示被修改的位置
+              [0, 1, 0, 0, 1, 0, 0]
+          ]
+      },
+      
+      "tensor_format": {
+          "pytorch_tensors": {
+              "input_ids": "torch.LongTensor(shape=[batch, seq_len])",
+              "attention_mask": "torch.FloatTensor(shape=[batch, seq_len])",
+              "token_type_ids": "torch.LongTensor(shape=[batch, seq_len])",
+              "position_ids": "torch.LongTensor(shape=[batch, seq_len])"
+          },
+          "tensorflow_tensors": {
+              "inputs": "tf.int32(shape=[batch, seq_len])",
+              "masks": "tf.float32(shape=[batch, seq_len])",
+              "segments": "tf.int32(shape=[batch, seq_len])"
+          }
+      }
+  }
+
+  特殊要求：
+  1. 保持时间顺序
+  2. 处理变长序列
+  3. 生成可直接输入模型的张量格式
+  4. 包含必要的特殊标记(START, END, PAD, MASK)
+  """
+
+  ### 2. 图像化表示（用于CNN）
+
+  ```python
+  DL_IMAGE_REPRESENTATION_PROMPT = """
+  将时序行为数据转换为2D图像表示，用于CNN模型处理。
+
+  输入行为序列：
+  {behavior_sequence}
+
+  时间窗口：{time_window}  # 例如: 24小时
+  分辨率：{resolution}      # 例如: 224x224
+
+  生成以下图像表示：
+
+  {
+      "behavior_image": {
+          "grayscale_matrix": [
+              # 224x224 矩阵，值范围[0, 255]
+              # 行表示时间，列表示不同行为类型
+              [[像素值矩阵]]
+          ],
+          "rgb_channels": {
+              "red_channel": [[频率热图]],    # 动作频率
+              "green_channel": [[风险热图]],  # 风险等级
+              "blue_channel": [[异常热图]]    # 异常程度
+          },
+          "encoding_scheme": {
+              "x_axis": "时间进度(0-223)",
+              "y_axis": "行为类型ID(0-223)",
+              "pixel_intensity": "行为强度/频率"
+          }
+      },
+      
+      "spectrogram_representation": {
+          "frequency_domain": [[频谱图矩阵]],  # FFT变换后
+          "mel_spectrogram": [[梅尔频谱]],
+          "mfcc_features": [[MFCC系数]],      # 13个系数
+          "spectral_features": {
+              "centroid": [谱质心序列],
+              "rolloff": [谱滚降点],
+              "entropy": [谱熵]
+          }
+      },
+      
+      "recurrence_plot": {
+          "distance_matrix": [[递归图矩阵]],   # 序列自相似性
+          "threshold": 0.1,
+          "embedding_dimension": 3,
+          "time_delay": 1
+      },
+      
+      "gramian_angular_field": {
+          "gasf": [[GASF矩阵]],  # Gramian Angular Summation Field
+          "gadf": [[GADF矩阵]],  # Gramian Angular Difference Field
+          "value_range": [-1, 1]
+      },
+      
+      "markov_transition_field": {
+          "mtf": [[MTF矩阵]],     # 马尔可夫转移场
+          "quantile_bins": 4,
+          "transition_matrix": [[转移概率]]
+      },
+      
+      "multi_channel_image": {
+          "channel_1": {
+              "name": "temporal_pattern",
+              "data": [[时间模式图]],
+              "normalization": "min_max"
+          },
+          "channel_2": {
+              "name": "user_behavior",
+              "data": [[用户行为图]],
+              "normalization": "z_score"
+          },
+          "channel_3": {
+              "name": "resource_access",
+              "data": [[资源访问图]],
+              "normalization": "robust"
+          },
+          "channel_4": {
+              "name": "risk_indicator",
+              "data": [[风险指标图]],
+              "normalization": "quantile"
+          }
+      },
+      
+      "preprocessing": {
+          "normalization_method": "min_max_scaling",
+          "interpolation": "bilinear",
+          "smoothing": "gaussian_filter",
+          "noise_reduction": "median_filter",
+          "data_augmentation": [
+              "rotation_range: ±15度",
+              "shift_range: ±10%",
+              "zoom_range: 0.9-1.1",
+              "horizontal_flip: True"
+          ]
+      }
+  }
+
+  要求：
+  1. 保持时序关系的空间映射
+  2. 确保图像具有可解释性
+  3. 不同通道编码不同维度信息
+  4. 适合标准CNN架构(ResNet, EfficientNet等)
+  """
+
+  ### 3. 图神经网络表示
+
+  ```python
+  DL_GRAPH_REPRESENTATION_PROMPT = """
+  构建图结构表示用于GNN（图神经网络）处理。
+
+  输入行为数据：
+  {behavior_data}
+
+  生成图表示：
+
+  {
+      "graph_structure": {
+          "nodes": [
+              {
+                  "node_id": 0,
+                  "node_type": "user",
+                  "features": [特征向量],
+                  "label": "normal/anomaly"
+              },
+              {
+                  "node_id": 1,
+                  "node_type": "resource",
+                  "features": [特征向量],
+                  "label": "sensitive/public"
+              }
+          ],
+          "edges": [
+              {
+                  "source": 0,
+                  "target": 1,
+                  "edge_type": "access",
+                  "weight": 0.8,
+                  "timestamp": 1234567890,
+                  "features": [边特征向量]
+              }
+          ],
+          "adjacency_matrix": [[邻接矩阵]],
+          "degree_matrix": [[度矩阵]],
+          "laplacian_matrix": [[拉普拉斯矩阵]]
+      },
+      
+      "node_embeddings": {
+          "initial_embeddings": [[初始嵌入]],
+          "positional_encoding": [[位置编码]],
+          "structural_encoding": [[结构编码]],
+          "feature_dim": 128
+      },
+      
+      "edge_attributes": {
+          "edge_types": ["access", "modify", "delete", "share"],
+          "edge_weights": [[权重矩阵]],
+          "temporal_edges": [
+              {"source": 0, "target": 1, "time": "t1"},
+              {"source": 1, "target": 2, "time": "t2"}
+          ]
+      },
+      
+      "subgraph_patterns": {
+          "motifs": [
+              {"pattern": "triangle", "count": 5},
+              {"pattern": "star", "count": 3}
+          ],
+          "communities": [
+              {"community_id": 0, "nodes": [0, 1, 2]},
+              {"community_id": 1, "nodes": [3, 4, 5]}
+          ],
+          "centrality_measures": {
+              "degree_centrality": [中心性值],
+              "betweenness_centrality": [介数中心性],
+              "closeness_centrality": [接近中心性],
+              "eigenvector_centrality": [特征向量中心性]
+          }
+      },
+      
+      "heterogeneous_graph": {
+          "node_types": ["user", "resource", "action", "session"],
+          "edge_types": ["performs", "targets", "belongs_to", "follows"],
+          "metapaths": [
+              ["user", "performs", "action", "targets", "resource"],
+              ["user", "belongs_to", "session", "contains", "action"]
+          ]
+      },
+      
+      "dynamic_graph": {
+          "snapshots": [
+              {"timestamp": "t1", "graph": {图快照1}},
+              {"timestamp": "t2", "graph": {图快照2}}
+          ],
+          "temporal_edges": [[时序边列表]],
+          "evolution_features": [
+              "node_addition_rate",
+              "edge_deletion_rate",
+              "clustering_evolution"
+          ]
+      }
+  }
+
+  要求：
+  1. 支持异构图和同构图
+  2. 包含时序信息
+  3. 可用于GCN, GAT, GraphSAGE等模型
+  4. 保持图的稀疏性以提高效率
+  """
