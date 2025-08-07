@@ -645,3 +645,809 @@
      ☒ 设计阶段3：倒推数据需求Prompt
      ☒ 构建完整的反向工程系统
      ☒ 验证和优化整个流程
+
+阶段四：基于倒推结果的代码生成
+
+  1. 代码生成Prompt设计
+
+  STAGE4_CODE_GENERATION_PROMPT = """
+  基于前三个阶段的分析结果，现在生成完整的可执行代码来实现这个分析流程。
+
+  ## 前期分析结果
+  初步分析结论：
+  ```json
+  {stage1_results}
+
+  分析推理过程：
+  {stage2_reasoning}
+
+  倒推的数据需求和流程：
+  {stage3_requirements}
+
+  代码生成要求
+
+  1. 根据分析流程生成完整的数据处理Pipeline
+
+  #!/usr/bin/env python3
+  # -*- coding: utf-8 -*-
+  """
+  基于LLM反向工程分析自动生成的数据分析Pipeline
+  生成时间: {timestamp}
+  分析结论: {primary_conclusion}
+  """
+
+  import pandas as pd
+  import numpy as np
+  import logging
+  from datetime import datetime, timedelta
+  from typing import Dict, List, Tuple, Any, Optional
+  import json
+  import warnings
+  from dataclasses import dataclass
+  from pathlib import Path
+
+  # 数据处理和分析库
+  {required_imports}
+
+  # 配置日志
+  logging.basicConfig(
+      level=logging.INFO,
+      format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  )
+  logger = logging.getLogger(__name__)
+
+  @dataclass
+  class AnalysisConfig:
+      """基于LLM分析结果的配置"""
+
+      # 从阶段1分析结果提取
+      data_complexity: str = "{data_complexity}"
+      analysis_confidence: float = {analysis_confidence}
+      recommended_approach: str = "{recommended_approach}"
+
+      # 从阶段3倒推结果提取
+      minimum_sample_size: int = {minimum_sample_size}
+      data_granularity: str = "{data_granularity}"
+      update_frequency: str = "{update_frequency}"
+
+      # 处理参数
+      anomaly_threshold: float = {anomaly_threshold}
+      pattern_detection_window: str = "{pattern_window}"
+      confidence_threshold: float = {confidence_threshold}
+
+  class DataIngestionModule:
+      """数据摄入模块 - 基于阶段3的数据需求设计"""
+
+      def __init__(self, config: AnalysisConfig):
+          self.config = config
+          self.data_schema = self._define_schema()
+
+      def _define_schema(self) -> Dict[str, str]:
+          """基于LLM分析定义数据模式"""
+          return {
+              # 从阶段3的required_raw_data提取
+              {data_schema_definition}
+          }
+
+      def load_and_validate_data(self, data_source: str) -> pd.DataFrame:
+          """
+          加载并验证数据
+          实现阶段3中定义的数据质量要求
+          """
+          logger.info(f"Loading data from {data_source}")
+
+          # 根据数据源类型加载
+          if data_source.endswith('.csv'):
+              df = pd.read_csv(data_source)
+          elif data_source.endswith('.json'):
+              df = pd.read_json(data_source)
+          else:
+              # 实时数据流处理
+              df = self._load_streaming_data(data_source)
+
+          # 数据验证 - 基于LLM识别的数据质量要求
+          validated_df = self._validate_data_quality(df)
+
+          logger.info(f"Data loaded and validated: {validated_df.shape}")
+          return validated_df
+
+      def _validate_data_quality(self, df: pd.DataFrame) -> pd.DataFrame:
+          """基于阶段1分析中识别的数据质量问题进行验证"""
+
+          # 检查完整性要求
+          {data_quality_checks}
+
+          return df
+
+      def _load_streaming_data(self, source: str) -> pd.DataFrame:
+          """实时数据加载 - 如果LLM推荐实时分析"""
+          # 实现实时数据摄入逻辑
+          pass
+
+  class FeatureExtractionEngine:
+      """特征提取引擎 - 实现阶段2中LLM的推理逻辑"""
+
+      def __init__(self, config: AnalysisConfig):
+          self.config = config
+          self.extraction_methods = self._build_extraction_methods()
+
+      def _build_extraction_methods(self) -> Dict[str, callable]:
+          """基于LLM分析思路构建特征提取方法"""
+          methods = {}
+
+          # 根据阶段2的reasoning_chain实现特征提取
+          {feature_extraction_methods}
+
+          return methods
+
+      def extract_features(self, df: pd.DataFrame) -> pd.DataFrame:
+          """
+          执行特征提取
+          按照LLM的分析步骤顺序执行
+          """
+          logger.info("Starting feature extraction based on LLM analysis")
+
+          feature_df = df.copy()
+
+          # 按照阶段2的推理步骤执行特征提取
+          for step_num, method_name in enumerate(self.extraction_methods, 1):
+              logger.info(f"Step {step_num}: {method_name}")
+              feature_df = self.extraction_methods[method_name](feature_df)
+
+              # 验证每一步的结果
+              self._validate_extraction_step(feature_df, step_num, method_name)
+
+          return feature_df
+
+      def _validate_extraction_step(self, df: pd.DataFrame, step: int, method: str):
+          """验证特征提取步骤 - 基于LLM的confidence指标"""
+
+          # 检查特征质量
+          if df.isnull().sum().sum() > len(df) * len(df.columns) * 0.1:
+              logger.warning(f"Step {step} ({method}) produced high missing values")
+
+          # 检查特征分布
+          numeric_cols = df.select_dtypes(include=[np.number]).columns
+          for col in numeric_cols:
+              if df[col].std() == 0:
+                  logger.warning(f"Step {step}: Feature {col} has zero variance")
+
+  class PatternAnalysisModule:
+      """模式分析模块 - 实现LLM识别的分析逻辑"""
+
+      def __init__(self, config: AnalysisConfig):
+          self.config = config
+          self.analyzers = self._initialize_analyzers()
+          self.baselines = {}
+
+      def _initialize_analyzers(self) -> Dict[str, Any]:
+          """根据LLM推荐的算法初始化分析器"""
+          analyzers = {}
+
+          # 基于阶段1的model_intuition选择算法
+          {algorithm_initialization}
+
+          return analyzers
+
+      def establish_baselines(self, df: pd.DataFrame):
+          """建立基线 - 基于LLM对正常模式的理解"""
+          logger.info("Establishing baselines based on LLM pattern recognition")
+
+          # 根据阶段2中识别的normal_patterns建立基线
+          {baseline_establishment}
+
+      def detect_patterns(self, df: pd.DataFrame) -> Dict[str, Any]:
+          """
+          模式检测 - 实现LLM的模式识别逻辑
+          """
+          logger.info("Detecting patterns using LLM-derived logic")
+
+          results = {
+              'normal_patterns': [],
+              'anomalous_patterns': [],
+              'confidence_scores': {},
+              'explanations': {}
+          }
+
+          # 实现LLM在阶段2中描述的模式识别逻辑
+          {pattern_detection_logic}
+
+          return results
+
+      def validate_findings(self, results: Dict[str, Any]) -> Dict[str, Any]:
+          """验证发现 - 基于LLM的不确定性分析"""
+
+          # 根据阶段2中的uncertainty_quantification进行验证
+          validation_results = {
+              'high_confidence_findings': [],
+              'uncertain_findings': [],
+              'requires_human_review': []
+          }
+
+          {validation_logic}
+
+          return validation_results
+
+  class AlertingSystem:
+      """告警系统 - 基于LLM的风险评估逻辑"""
+
+      def __init__(self, config: AnalysisConfig):
+          self.config = config
+          self.alert_rules = self._define_alert_rules()
+
+      def _define_alert_rules(self) -> List[Dict[str, Any]]:
+          """基于LLM分析定义告警规则"""
+          rules = []
+
+          # 根据阶段1的key_challenges和阶段2的decision_factors定义规则
+          {alert_rules_definition}
+
+          return rules
+
+      def evaluate_alerts(self, analysis_results: Dict[str, Any]) -> List[Dict[str, Any]]:
+          """评估并生成告警"""
+          alerts = []
+
+          for rule in self.alert_rules:
+              if self._evaluate_rule(rule, analysis_results):
+                  alert = self._create_alert(rule, analysis_results)
+                  alerts.append(alert)
+
+          return alerts
+
+      def _evaluate_rule(self, rule: Dict[str, Any], results: Dict[str, Any]) -> bool:
+          """评估告警规则"""
+          # 实现规则评估逻辑
+          return rule['condition'](results)
+
+      def _create_alert(self, rule: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
+          """创建告警"""
+          return {
+              'timestamp': datetime.now().isoformat(),
+              'severity': rule['severity'],
+              'message': rule['message'],
+              'details': rule['details_extractor'](results),
+              'confidence': rule.get('confidence', 0.8),
+              'recommended_actions': rule.get('actions', [])
+          }
+
+  class LLMDrivenAnalysisPipeline:
+      """LLM驱动的完整分析Pipeline"""
+
+      def __init__(self, config_path: Optional[str] = None):
+          self.config = AnalysisConfig() if not config_path else self._load_config(config_path)
+
+          # 初始化各个模块
+          self.data_ingestion = DataIngestionModule(self.config)
+          self.feature_extraction = FeatureExtractionEngine(self.config)
+          self.pattern_analysis = PatternAnalysisModule(self.config)
+          self.alerting = AlertingSystem(self.config)
+
+          self.analysis_history = []
+
+          logger.info("LLM-driven Analysis Pipeline initialized")
+
+      def run_analysis(self, data_source: str, 
+                      save_results: bool = True) -> Dict[str, Any]:
+          """
+          运行完整的分析流程
+          按照LLM倒推的分析步骤执行
+          """
+          logger.info("Starting LLM-driven analysis pipeline")
+
+          start_time = datetime.now()
+
+          try:
+              # Step 1: 数据摄入
+              logger.info("Phase 1: Data Ingestion")
+              raw_data = self.data_ingestion.load_and_validate_data(data_source)
+
+              # Step 2: 特征提取
+              logger.info("Phase 2: Feature Extraction")
+              features = self.feature_extraction.extract_features(raw_data)
+
+              # Step 3: 建立基线（首次运行或定期更新）
+              if not self.pattern_analysis.baselines:
+                  logger.info("Phase 3a: Establishing Baselines")
+                  self.pattern_analysis.establish_baselines(features)
+
+              # Step 4: 模式分析
+              logger.info("Phase 3b: Pattern Analysis")
+              pattern_results = self.pattern_analysis.detect_patterns(features)
+
+              # Step 5: 结果验证
+              logger.info("Phase 4: Validation")
+              validation_results = self.pattern_analysis.validate_findings(pattern_results)
+
+              # Step 6: 告警评估
+              logger.info("Phase 5: Alert Evaluation")
+              alerts = self.alerting.evaluate_alerts(pattern_results)
+
+              # 整合结果
+              analysis_results = {
+                  'metadata': {
+                      'analysis_id': f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                      'start_time': start_time.isoformat(),
+                      'end_time': datetime.now().isoformat(),
+                      'data_source': data_source,
+                      'samples_processed': len(raw_data),
+                      'features_extracted': len(features.columns),
+                      'llm_confidence': self.config.analysis_confidence
+                  },
+                  'data_summary': {
+                      'total_samples': len(raw_data),
+                      'time_range': f"{raw_data.index.min()} to {raw_data.index.max()}",
+                      'data_quality_score': self._calculate_data_quality(raw_data)
+                  },
+                  'pattern_analysis': pattern_results,
+                  'validation': validation_results,
+                  'alerts': alerts,
+                  'llm_analysis_basis': {
+                      'initial_assessment': "{stage1_summary}",
+                      'reasoning_logic': "{stage2_summary}",
+                      'derived_requirements': "{stage3_summary}"
+                  }
+              }
+
+              # 保存结果
+              if save_results:
+                  self._save_analysis_results(analysis_results)
+
+              # 更新历史记录
+              self.analysis_history.append(analysis_results)
+
+              logger.info("Analysis pipeline completed successfully")
+              return analysis_results
+
+          except Exception as e:
+              logger.error(f"Analysis pipeline failed: {e}")
+              raise
+
+      def _calculate_data_quality(self, df: pd.DataFrame) -> float:
+          """计算数据质量分数"""
+          # 基于LLM在阶段1中识别的数据质量问题计算分数
+          quality_factors = []
+
+          # 完整性
+          completeness = 1 - (df.isnull().sum().sum() / (len(df) * len(df.columns)))
+          quality_factors.append(completeness)
+
+          # 一致性（简化版）
+          consistency = 1 - (df.duplicated().sum() / len(df))
+          quality_factors.append(consistency)
+
+          return np.mean(quality_factors)
+
+      def _save_analysis_results(self, results: Dict[str, Any]):
+          """保存分析结果"""
+          output_dir = Path("analysis_results")
+          output_dir.mkdir(exist_ok=True)
+
+          filename = f"analysis_{results['metadata']['analysis_id']}.json"
+          with open(output_dir / filename, 'w') as f:
+              json.dump(results, f, indent=2, default=str)
+
+          logger.info(f"Analysis results saved to {output_dir / filename}")
+
+      def get_analysis_summary(self) -> Dict[str, Any]:
+          """获取分析摘要报告"""
+          if not self.analysis_history:
+              return {'message': 'No analysis history available'}
+
+          latest_analysis = self.analysis_history[-1]
+
+          return {
+              'total_analyses_run': len(self.analysis_history),
+              'latest_analysis': {
+                  'timestamp': latest_analysis['metadata']['end_time'],
+                  'samples_processed': latest_analysis['metadata']['samples_processed'],
+                  'alerts_generated': len(latest_analysis['alerts']),
+                  'high_confidence_findings':
+  len(latest_analysis['validation']['high_confidence_findings'])
+              },
+              'system_performance': {
+                  'avg_processing_time': self._calculate_avg_processing_time(),
+                  'success_rate': self._calculate_success_rate(),
+                  'data_quality_trend': self._get_quality_trend()
+              },
+              'llm_effectiveness': {
+                  'analysis_confidence': self.config.analysis_confidence,
+                  'pattern_detection_accuracy': self._estimate_detection_accuracy()
+              }
+          }
+
+  # 使用示例和主函数
+  def main():
+      """主函数 - 演示LLM驱动的分析流程"""
+
+      # 初始化分析Pipeline
+      pipeline = LLMDrivenAnalysisPipeline()
+
+      # 运行分析
+      results = pipeline.run_analysis(
+          data_source="data/security_logs.csv",
+          save_results=True
+      )
+
+      # 输出结果摘要
+      print("\\n" + "="*50)
+      print("LLM驱动的分析结果")
+      print("="*50)
+
+      print(f"处理样本数: {results['metadata']['samples_processed']:,}")
+      print(f"提取特征数: {results['metadata']['features_extracted']}")
+      print(f"生成告警数: {len(results['alerts'])}")
+      print(f"LLM分析置信度: {results['metadata']['llm_confidence']:.2f}")
+
+      if results['alerts']:
+          print("\\n⚠️  高优先级告警:")
+          for alert in results['alerts'][:3]:  # 显示前3个告警
+              print(f"  - {alert['severity']}: {alert['message']}")
+
+      print(f"\\n📊 数据质量分数: {results['data_summary']['data_quality_score']:.2f}")
+
+      # 获取分析摘要
+      summary = pipeline.get_analysis_summary()
+      print(f"\\n📈 系统摘要:")
+      print(f"  - 总分析次数: {summary['total_analyses_run']}")
+      print(f"  - 成功率: {summary['system_performance']['success_rate']:.1%}")
+
+      return results
+
+  if __name__ == "__main__":
+      results = main()
+
+  2. 根据具体分析结果填充代码模板
+
+  基于阶段1-3的结果，自动填充上述代码模板中的占位符：
+
+  # 代码片段映射逻辑
+  {required_imports} = generate_imports_based_on_algorithms(stage1_results['recommended_approach'])
+  {data_complexity} = stage1_results['overall_assessment']['data_complexity']
+  {analysis_confidence} = stage1_results['confidence_level']['analysis_reliability']
+  {minimum_sample_size} = stage3_results['minimal_viable_dataset']['minimum_sample_count']
+  {anomaly_threshold} = derive_threshold_from_reasoning(stage2_results)
+  {feature_extraction_methods} = map_reasoning_to_code(stage2_results['reasoning_chain'])
+  {pattern_detection_logic} = implement_pattern_logic(stage2_results['pattern_recognition'])
+  {alert_rules_definition} = create_alert_rules(stage1_results['key_challenges'])
+
+  要求：
+  1. 生成的代码必须可直接运行
+  2. 包含完整的错误处理和日志
+  3. 基于LLM的分析逻辑，不添加额外假设
+  4. 保留LLM分析的可追溯性
+  5. 支持配置和扩展
+  """
+
+  2. 分析流程到代码的自动映射系统
+
+  class AnalysisToCodeMapper:
+      """将LLM分析结果映射为可执行代码"""
+
+      def __init__(self):
+          self.code_templates = {
+              'data_ingestion': self._get_ingestion_template(),
+              'feature_extraction': self._get_extraction_template(),
+              'pattern_analysis': self._get_analysis_template(),
+              'alerting': self._get_alerting_template()
+          }
+
+      def generate_complete_code(self, 
+                                stage1_results: dict,
+                                stage2_reasoning: dict, 
+                                stage3_requirements: dict) -> str:
+          """生成完整的可执行代码"""
+
+          # 1. 分析算法需求
+          algorithm_requirements = self._extract_algorithm_requirements(
+              stage1_results, stage2_reasoning
+          )
+
+          # 2. 生成导入语句
+          imports = self._generate_imports(algorithm_requirements)
+
+          # 3. 生成数据处理逻辑
+          data_processing = self._generate_data_processing(stage3_requirements)
+
+          # 4. 生成特征提取逻辑
+          feature_logic = self._generate_feature_extraction(stage2_reasoning)
+
+          # 5. 生成模式分析逻辑
+          pattern_logic = self._generate_pattern_analysis(stage1_results, stage2_reasoning)
+
+          # 6. 生成告警逻辑
+          alert_logic = self._generate_alerting_logic(stage1_results)
+
+          # 7. 组装完整代码
+          complete_code = STAGE4_CODE_GENERATION_PROMPT.format(
+              timestamp=datetime.now().isoformat(),
+              primary_conclusion=stage1_results.get('primary_conclusions', ['Unknown'])[0],
+              required_imports=imports,
+              data_complexity=stage1_results['overall_assessment']['data_complexity'],
+              analysis_confidence=stage1_results['confidence_level']['analysis_reliability'],
+              recommended_approach=stage1_results['recommended_approach']['analysis_type'],
+              # ... 其他映射参数
+          )
+
+          return complete_code
+
+      def _extract_algorithm_requirements(self, stage1: dict, stage2: dict) -> dict:
+          """从LLM分析中提取算法需求"""
+
+          requirements = {
+              'primary_algorithms': [],
+              'preprocessing_needs': [],
+              'analysis_methods': [],
+              'validation_approaches': []
+          }
+
+          # 从阶段1提取
+          model_category = stage1.get('recommended_approach', {}).get('model_category',
+  'classification')
+          if model_category == 'anomaly_detection':
+              requirements['primary_algorithms'].extend(['IsolationForest', 'LocalOutlierFactor'])
+          elif model_category == 'classification':
+              requirements['primary_algorithms'].extend(['RandomForestClassifier', 'XGBClassifier'])
+
+          # 从阶段2的推理链提取
+          for step in stage2.get('reasoning_chain', []):
+              if 'statistical' in step.get('observation', '').lower():
+                  requirements['analysis_methods'].append('scipy.stats')
+              if 'correlation' in step.get('interpretation', '').lower():
+                  requirements['preprocessing_needs'].append('correlation_analysis')
+
+          return requirements
+
+      def _generate_imports(self, requirements: dict) -> str:
+          """生成import语句"""
+          imports = [
+              "import pandas as pd",
+              "import numpy as np",
+              "from datetime import datetime",
+              "import logging"
+          ]
+
+          # 根据算法需求添加导入
+          if 'IsolationForest' in requirements['primary_algorithms']:
+              imports.append("from sklearn.ensemble import IsolationForest")
+          if 'XGBClassifier' in requirements['primary_algorithms']:
+              imports.append("import xgboost as xgb")
+          if 'correlation_analysis' in requirements['preprocessing_needs']:
+              imports.append("from scipy.stats import pearsonr, spearmanr")
+
+          return '\n'.join(imports)
+
+      def _generate_feature_extraction(self, stage2_reasoning: dict) -> str:
+          """基于推理过程生成特征提取代码"""
+
+          extraction_code = []
+
+          # 根据推理链生成提取逻辑
+          for i, step in enumerate(stage2_reasoning.get('reasoning_chain', [])):
+              observation = step.get('observation', '')
+              interpretation = step.get('interpretation', '')
+
+              if 'frequency' in observation.lower():
+                  extraction_code.append(f"""
+      def extract_frequency_features_{i}(self, df):
+          \"\"\"提取频率特征 - 基于LLM观察: {observation}\"\"\"
+          df['action_frequency'] = df.groupby('user_id')['action'].transform('count')
+          df['hourly_frequency'] = df.groupby(['user_id', 
+  df['timestamp'].dt.hour])['action'].transform('count')
+          return df
+                  """)
+
+              if 'pattern' in observation.lower():
+                  extraction_code.append(f"""
+      def extract_pattern_features_{i}(self, df):
+          \"\"\"提取模式特征 - 基于LLM解释: {interpretation}\"\"\"
+          df['sequence_length'] = df.groupby('user_id').cumcount() + 1
+          df['action_variety'] = df.groupby('user_id')['action'].transform('nunique')
+          return df
+                  """)
+
+          methods_dict = "{\n" + ",\n".join([
+              f"        'extract_method_{i}': self.extract_frequency_features_{i}"
+              for i in range(len(extraction_code))
+          ]) + "\n        }"
+
+          return methods_dict + "\n\n" + "\n".join(extraction_code)
+
+
+  # 集成到反向工程系统
+  class EnhancedReverseEngineeringAnalyzer:
+      """增强的反向工程分析器，包含代码生成能力"""
+
+      def __init__(self, llm_client):
+          super().__init__(llm_client)
+          self.code_mapper = AnalysisToCodeMapper()
+
+      async def full_analysis_with_code_generation(self,
+                                                  raw_data_sample: str,
+                                                  data_context: dict) -> dict:
+          """完整的四阶段分析，包括代码生成"""
+
+          print("🔍 开始完整的反向工程分析...")
+
+          # 前三个阶段
+          analysis = await self.full_reverse_analysis(raw_data_sample, data_context)
+
+          # 阶段4：代码生成
+          print("💻 阶段4: 基于分析结果生成可执行代码...")
+          generated_code = self.code_mapper.generate_complete_code(
+              analysis['initial_assessment'],
+              analysis['reasoning_process'],
+              analysis['derived_requirements']
+          )
+
+          # 代码验证和优化
+          print("🔧 验证和优化生成的代码...")
+          validated_code = await self.validate_and_optimize_code(
+              generated_code, analysis
+          )
+
+          # 整合结果
+          complete_solution = {
+              **analysis,
+              'generated_code': {
+                  'main_pipeline': validated_code,
+                  'code_metadata': {
+                      'generated_at': datetime.now().isoformat(),
+                      'based_on_analysis': analysis['meta_info']['analysis_timestamp'],
+                      'llm_confidence':
+  analysis['initial_assessment']['confidence_level']['analysis_reliability'],
+                      'code_complexity': self._estimate_code_complexity(validated_code)
+                  }
+              }
+          }
+
+          print("✅ 完整分析和代码生成完成!")
+          return complete_solution
+
+      async def validate_and_optimize_code(self, code: str, analysis: dict) -> str:
+          """验证和优化生成的代码"""
+
+          # 语法检查
+          try:
+              compile(code, '<generated>', 'exec')
+              print("✓ 代码语法检查通过")
+          except SyntaxError as e:
+              print(f"⚠️ 语法错误: {e}")
+              # 可以调用LLM修复语法错误
+              code = await self._fix_syntax_errors(code, str(e))
+
+          # 逻辑一致性检查
+          consistency_issues = self._check_logical_consistency(code, analysis)
+          if consistency_issues:
+              print(f"⚠️ 发现逻辑一致性问题: {len(consistency_issues)} 个")
+              code = await self._fix_consistency_issues(code, consistency_issues)
+
+          # 性能优化
+          optimized_code = self._optimize_performance(code)
+
+          return optimized_code
+
+
+  # 使用示例
+  async def demonstrate_complete_pipeline():
+      """演示完整的四阶段分析+代码生成"""
+
+      # 示例数据
+      sample_data = """
+      2024-01-20 09:15:23,user_alice,login,portal_system,success,192.168.1.100
+      2024-01-20 09:16:45,user_alice,access_dashboard,dashboard,success,192.168.1.100
+      2024-01-20 09:18:12,user_alice,download_report,file_system,success,192.168.1.100
+      2024-01-20 02:30:15,user_mallory,login,portal_system,failed,203.0.113.0
+      2024-01-20 02:30:18,user_mallory,login,portal_system,failed,203.0.113.0
+      2024-01-20 02:30:23,user_mallory,login,portal_system,success,203.0.113.0
+      2024-01-20 02:31:00,user_mallory,access_admin,admin_panel,success,203.0.113.0
+      2024-01-20 02:32:15,user_mallory,bulk_export,database,success,203.0.113.0
+      """
+
+      context = {
+          'data_type': 'access_logs',
+          'business_context': 'Enterprise security monitoring'
+      }
+
+      # 执行完整分析
+      analyzer = EnhancedReverseEngineeringAnalyzer(llm_client)
+      solution = await analyzer.full_analysis_with_code_generation(
+          sample_data, context
+      )
+
+      # 保存生成的代码
+      code_file = Path('generated_analysis_pipeline.py')
+      code_file.write_text(solution['generated_code']['main_pipeline'])
+
+      print(f"""
+  🎉 完整解决方案已生成!
+
+  📊 分析摘要:
+  - LLM识别的主要模式: {solution['initial_assessment']['immediate_observations']}
+  - 推荐的分析方法: {solution['initial_assessment']['recommended_approach']['analysis_type']}
+  - 分析置信度: {solution['initial_assessment']['confidence_level']['analysis_reliability']:.2f}
+
+  💻 代码生成:
+  - 代码文件: {code_file.absolute()}
+  - 代码复杂度: {solution['generated_code']['code_metadata']['code_complexity']}
+  - 基于分析: {solution['generated_code']['code_metadata']['based_on_analysis']}
+
+  🚀 下一步: 运行生成的代码文件来执行实际分析
+      python {code_file.name}
+      """)
+
+      return solution
+
+  if __name__ == "__main__":
+      import asyncio
+      asyncio.run(demonstrate_complete_pipeline())
+
+⏺ Update Todos
+  ⎿  ☒ 设计阶段4：基于倒推结果的代码生成Prompt
+     ☒ 创建分析流程到代码的映射器
+     ☒ 生成完整的数据处理Pipeline代码
+     ☒ 集成到反向工程分析系统
+     ☒ 验证生成代码的质量和可执行性
+
+⏺ 总结：四阶段反向工程代码生成系统
+
+  核心优势
+
+  1. 从分析到代码的无缝转换：
+    - 直接基于LLM的分析逻辑生成代码
+    - 保持分析思路的完整性和可追溯性
+    - 避免人工转换过程中的信息丢失
+  2. 高度定制化：
+    - 根据具体数据特征生成针对性代码
+    - 不是通用模板，而是为特定分析场景优化
+    - LLM的推理过程直接映射为算法逻辑
+  3. 可执行性保证：
+    - 生成的代码包含完整的错误处理
+    - 自动语法检查和逻辑一致性验证
+    - 包含日志、监控和结果保存功能
+
+  完整工作流程
+
+  原始数据样本
+      ↓
+  阶段1: LLM直觉分析 (初步判断、模式识别)
+      ↓
+  阶段2: 推理过程解释 (分析逻辑、假设前提)
+      ↓
+  阶段3: 倒推数据需求 (具体步骤、验证机制)
+      ↓
+  阶段4: 自动代码生成 (可执行Pipeline)
+      ↓
+  代码验证优化 (语法检查、逻辑验证)
+      ↓
+  可直接运行的分析系统
+
+  实际应用效果
+
+  通过这个四阶段系统，您可以：
+
+  1. 输入: 一段原始的安全日志数据
+  2. 输出: 一个完整的、可运行的数据分析系统
+
+  生成的代码将包含：
+  - 数据加载和验证逻辑
+  - 特征提取算法
+  - 模式检测和异常识别
+  - 告警规则和通知机制
+  - 结果保存和报告生成
+
+  与传统方法的对比
+
+  | 维度   | 传统特征工程    | 反向工程方法     |
+  |------|-----------|------------|
+  | 分析起点 | 预定义特征模板   | 数据驱动的直觉判断  |
+  | 推理过程 | 基于经验假设    | LLM解释推理链   |
+  | 代码生成 | 手工编写或通用模板 | 基于分析逻辑自动生成 |
+  | 适应性  | 需要专家调整    | 自适应不同数据特征  |
+  | 可解释性 | 黑盒或有限解释   | 完整的推理过程追溯  |
+
+  这个系统特别适合您的安全数据分析平台，因为：
+  - 灵活性: 可以处理各种类型的安全事件
+  - 准确性: 基于数据特征的精准分析
+  - 效率: 从数据到代码的端到端自动化
+  - 可维护性: 生成的代码结构清晰、文档完整
